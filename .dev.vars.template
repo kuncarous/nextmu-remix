@@ -1,0 +1,14 @@
+NODE_ENV="development"
+SITE_DOMAIN="http://localhost:5173/"
+SESSION_COOKIE_SECRET="base64-encoded-32bytes"
+
+OPENID_ISSUER_URL="http://localhost:8080"
+OPENID_CLIENT_ID="11111111111111@nextmu"
+# Keep client secret empty if use PKCE flow which is the recommended flow
+OPENID_CLIENT_SECRET=
+OPENID_AUTH_METHOD="none"
+
+AUTH_CALLBACK_URL="http://localhost:5173/login/callback"
+LOGOUT_CALLBACK_URL="http://localhost:5173/logout/callback"
+
+MONGODB_URL=mongodb://username:password@localhost:27017/admin?minPoolSize=1&maxPoolSize=2&authSource=admin

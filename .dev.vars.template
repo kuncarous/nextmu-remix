@@ -3,10 +3,17 @@ SITE_DOMAIN="http://localhost:5173/"
 SESSION_COOKIE_SECRET="base64-encoded-32bytes"
 
 OPENID_ISSUER_URL="http://localhost:8080"
-OPENID_CLIENT_ID="11111111111111@nextmu"
+OPENID_PROJECT_ID="260543572963491845"
+
+PORTAL_OPENID_CLIENT_ID="111111111111111111@nextmu"
 # Keep client secret empty if use PKCE flow which is the recommended flow
-OPENID_CLIENT_SECRET=
-OPENID_AUTH_METHOD="none"
+PORTAL_OPENID_CLIENT_SECRET=
+PORTAL_OPENID_AUTH_METHOD="none"
+PORTAL_OPENID_ADDITIONAL_SCOPES="urn:zitadel:iam:org:id:260543569205395461 urn:zitadel:iam:org:project:id:260543572963491845:aud urn:zitadel:iam:org:projects:roles"
+
+PORTAL_API_OPENID_CLIENT_ID="111111111111111111@nextmu"
+PORTAL_API_OPENID_CLIENT_SECRET="AcBeEcAbBJ6Ouuzf3AtbIlYQG30A81eo53I8RJwf3Wf4JMAdYFwygRmInjU"
+PORTAL_API_OPENID_AUTH_METHOD="client_secret_basic"
 
 AUTH_CALLBACK_URL="http://localhost:5173/login/callback"
 LOGOUT_CALLBACK_URL="http://localhost:5173/logout/callback"

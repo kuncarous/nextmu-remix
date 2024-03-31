@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { userPrefs } from './cookies.server';
 import { getUserFromSession, redirectToLogout, refreshSession } from './services/auth.server';
 import { UserInfoProvider } from './providers/auth';
+import { ErrorBoundary as ErrorBoundaryComponent } from './errors';
 
 export const links: LinksFunction = () => [
     { rel: "icon", href: "favicon.png" },
@@ -78,3 +79,5 @@ export default function App() {
         </html>
     );
 }
+
+export const ErrorBoundary = ErrorBoundaryComponent;

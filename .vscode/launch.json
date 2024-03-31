@@ -6,8 +6,7 @@
             "name": "Run Script: dev",
             "request": "launch",
             "command": "pnpm run dev",
-            "cwd": "${workspaceFolder}",
-            "sudo": true
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

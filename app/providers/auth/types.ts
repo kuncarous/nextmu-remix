@@ -1,5 +1,5 @@
 export interface UserInfo {
-    aud: string;
+    aud: string | string[];
     sub: string;
     email: string;
     email_verified: boolean;

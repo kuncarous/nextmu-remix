@@ -15,15 +15,14 @@ export interface UserInfoProviderProps {
 export function UserInfoProvider({
     userInfo,
     children,
-  }: UserInfoProviderProps) {
-    const data = useMemo(
-      () => userInfo,
-      [userInfo]
-    );
-  
+}: UserInfoProviderProps) {
+    const data = useMemo(() => userInfo, [userInfo]);
+
     return (
-      <UserInfoContext.Provider value={data}>{children}</UserInfoContext.Provider>
+        <UserInfoContext.Provider value={data}>
+            {children}
+        </UserInfoContext.Provider>
     );
-  }
-  
-  UserInfoProvider.displayName = 'NextMU/UserInfoProvider';
+}
+
+UserInfoProvider.displayName = 'NextMU/UserInfoProvider';

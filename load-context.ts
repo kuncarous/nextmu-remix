@@ -1,4 +1,4 @@
-import { type PlatformProxy } from "wrangler";
+import { type PlatformProxy } from 'wrangler';
 
 // When using `wrangler.toml` to configure bindings,
 // `wrangler types` will generate types for those bindings
@@ -10,10 +10,10 @@ interface Env {
     [key: string]: string;
 }
 
-type Cloudflare = Omit<PlatformProxy<Env>, "dispose">;
+type Cloudflare = Omit<PlatformProxy<Env>, 'dispose'>;
 
-declare module "@remix-run/cloudflare" {
-  interface AppLoadContext {
-    cloudflare: Cloudflare;
-  }
+declare module '@remix-run/cloudflare' {
+    interface AppLoadContext {
+        cloudflare: Cloudflare;
+    }
 }

@@ -1,6 +1,6 @@
-import Backend from "i18next-http-backend";
-import { RemixI18Next } from "remix-i18next/server";
-import i18n from "~/i18n"; // your i18n configuration file
+import Backend from 'i18next-http-backend';
+import { RemixI18Next } from 'remix-i18next/server';
+import i18n from '~/i18n'; // your i18n configuration file
 
 const i18next = new RemixI18Next({
     detection: {
@@ -12,7 +12,7 @@ const i18next = new RemixI18Next({
     i18next: {
         ...i18n,
         backend: {
-            loadPath: "/locales/{{lng}}/{{ns}}.json",
+            loadPath: '/locales/{{lng}}/{{ns}}.json',
         },
     },
     // The i18next plugins you want RemixI18next to use for `i18n.getFixedT` inside loaders and actions.

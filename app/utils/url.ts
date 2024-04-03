@@ -1,6 +1,6 @@
 /*
-* Credits : https://github.com/austin-rausch/url-resolve-browser
-*/
+ * Credits : https://github.com/austin-rausch/url-resolve-browser
+ */
 
 /*
 The majority of the module is built by following RFC1808
@@ -42,7 +42,7 @@ function _baseParse(base: string) {
         host: '',
         path: '',
         query: '',
-        protocol: ''
+        protocol: '',
     };
 
     let path = base;
@@ -92,7 +92,7 @@ function _relativeParse(relative: string) {
         query: '',
         netPath: false,
         absolutePath: false,
-        relativePath: false
+        relativePath: false,
     };
     // check for protocol
     // if protocol exists, is net path (absolute URL)
@@ -133,10 +133,10 @@ function _relativeParse(relative: string) {
 
 function _shouldAddSlash(url: string) {
     const protocolIndex = url.indexOf('//') + 2;
-    const noPath = !(url.includes('/', protocolIndex));
-    const noQuery = !(url.includes('?', protocolIndex));
-    const noHash = !(url.includes('#', protocolIndex));
-    return (noPath && noQuery && noHash);
+    const noPath = !url.includes('/', protocolIndex);
+    const noQuery = !url.includes('?', protocolIndex);
+    const noHash = !url.includes('#', protocolIndex);
+    return noPath && noQuery && noHash;
 }
 
 function _shouldAddProtocol(url: string) {
@@ -144,10 +144,10 @@ function _shouldAddProtocol(url: string) {
 }
 
 /*
-* PRECONDITION: Base is a fully qualified URL. e.g. http://example.com/
-* optional: path, query or hash
-* returns the resolved url
-*/
+ * PRECONDITION: Base is a fully qualified URL. e.g. http://example.com/
+ * optional: path, query or hash
+ * returns the resolved url
+ */
 export function resolve(base: string, relative: string) {
     base = base.trim();
     relative = relative.trim();
@@ -164,7 +164,8 @@ export function resolve(base: string, relative: string) {
         throw new Error('Error, protocol is not specified');
     }
 
-    if (relativeObj.netPath) { // relative is full qualified URL
+    if (relativeObj.netPath) {
+        // relative is full qualified URL
         if (_shouldAddProtocol(relativeObj.href)) {
             relativeObj.href = baseObj.protocol + relativeObj.href;
         }
@@ -174,11 +175,13 @@ export function resolve(base: string, relative: string) {
         }
 
         return relativeObj.href;
-    } else if (relativeObj.absolutePath) { // relative is an absolute path
+    } else if (relativeObj.absolutePath) {
+        // relative is an absolute path
         const { path, query, hash } = relativeObj;
 
         return baseObj.host + _pathResolve(path) + query + hash;
-    } else if (relativeObj.relativePath) { // relative is a relative path
+    } else if (relativeObj.relativePath) {
+        // relative is a relative path
         const { path, query, hash } = relativeObj;
 
         let basePath = baseObj.path;
@@ -195,7 +198,7 @@ export function resolve(base: string, relative: string) {
         }
 
         // if result is just the base host, add /
-        if ((resolvePath === '') && (!query) && (!hash)) {
+        if (resolvePath === '' && !query && !hash) {
             resultString += '/';
         } else {
             resultString += resolvePath + query + hash;
@@ -205,7 +208,7 @@ export function resolve(base: string, relative: string) {
     } else {
         const { host, path, query } = baseObj;
         // when path and query aren't supplied add slash
-        if ((!path) && (!query)) {
+        if (!path && !query) {
             return _addSlash(host);
         }
         return host + path + query + relativeObj.hash;

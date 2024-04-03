@@ -4,15 +4,15 @@
  * For more information, see https://remix.run/file-conventions/entry.server
  */
 
-import type { AppLoadContext, EntryContext } from "@remix-run/cloudflare";
-import { RemixServer } from "@remix-run/react";
-import { isbot } from "isbot";
-import { renderToReadableStream } from "react-dom/server";
-import { createInstance } from "i18next";
-import i18next from "./i18next.server";
-import { I18nextProvider, initReactI18next } from "react-i18next";
-import Backend, { HttpBackendOptions } from "i18next-http-backend";
-import i18n from "./i18n";
+import type { AppLoadContext, EntryContext } from '@remix-run/cloudflare';
+import { RemixServer } from '@remix-run/react';
+import { createInstance } from 'i18next';
+import Backend, { HttpBackendOptions } from 'i18next-http-backend';
+import { isbot } from 'isbot';
+import { renderToReadableStream } from 'react-dom/server';
+import { I18nextProvider, initReactI18next } from 'react-i18next';
+import i18n from './i18n';
+import i18next from './i18next.server';
 
 export default async function handleRequest(
     request: Request,
@@ -22,7 +22,7 @@ export default async function handleRequest(
     // This is ignored so we can keep it in the template for visibility.  Feel
     // free to delete this parameter in your app if you're not using it!
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    loadContext: AppLoadContext
+    loadContext: AppLoadContext,
 ) {
     const url = new URL(request.url);
 
@@ -38,7 +38,8 @@ export default async function handleRequest(
             lng, // The locale we detected above
             ns, // The namespaces the routes about to render wants to use
             backend: {
-                loadPath: (lngs, namespace) => `${url.origin}/locales/${lngs[0]}/${namespace[0]}.json`,
+                loadPath: (lngs, namespace) =>
+                    `${url.origin}/locales/${lngs[0]}/${namespace[0]}.json`,
                 requestOptions: {
                     mode: undefined,
                     credentials: undefined,
@@ -58,14 +59,14 @@ export default async function handleRequest(
                 console.error(error);
                 responseStatusCode = 500;
             },
-        }
+        },
     );
 
-    if (isbot(request.headers.get("user-agent") || "")) {
+    if (isbot(request.headers.get('user-agent') || '')) {
         await body.allReady;
     }
 
-    responseHeaders.set("Content-Type", "text/html");
+    responseHeaders.set('Content-Type', 'text/html');
     return new Response(body, {
         headers: responseHeaders,
         status: responseStatusCode,

@@ -4,16 +4,21 @@
  * and should modify this configuration to best suit your team's needs.
  */
 
-import globals from 'globals';
 import js from '@eslint/js';
-import reactConfig from 'eslint-plugin-react';
-import jsxA11yConfig from 'eslint-plugin-jsx-a11y';
-import reactHooksConfig from 'eslint-plugin-react-hooks';
 import tsEslintConfig from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import jsxA11yConfig from 'eslint-plugin-jsx-a11y';
+import reactConfig from 'eslint-plugin-react';
+import reactHooksConfig from 'eslint-plugin-react-hooks';
+import globals from 'globals';
 //import importConfig from 'eslint-plugin-import'; // TO DO : update package when fixed for flat config
 import stylistic from '@stylistic/eslint-plugin';
+import {
+    configs as ReactQueryConfigs,
+    rules as ReactQueryRules,
+} from '@tanstack/eslint-plugin-query';
 import gitignore from 'eslint-config-flat-gitignore';
+import eslintConfigPrettier from 'eslint-config-prettier';
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
@@ -22,11 +27,15 @@ export default [
     {
         plugins: {
             '@stylistic': stylistic,
+            '@tanstack/eslint-plugin-query': {
+                rules: ReactQueryRules,
+                configs: ReactQueryConfigs,
+            },
             //import: importConfig,
         },
         languageOptions: {
-            ecmaVersion: "latest",
-            sourceType: "module",
+            ecmaVersion: 'latest',
+            sourceType: 'module',
             parserOptions: {
                 ecmaFeatures: {
                     jsx: true,
@@ -37,14 +46,16 @@ export default [
                 ...globals.commonjs,
             },
         },
-        /*rules: {
-            ...importConfig.configs["recommended"].rules,
-        }*/
+        rules: {
+            '@tanstack/eslint-plugin-query/exhaustive-deps': 'error',
+            '@tanstack/eslint-plugin-query/no-rest-destructuring': 'warn',
+            '@tanstack/eslint-plugin-query/stable-query-client': 'error',
+        },
     },
 
     // React
     {
-        files: ["app/**/*.{js,jsx,ts,tsx}"],
+        files: ['app/**/*.{js,jsx,ts,tsx}'],
         plugins: {
             react: reactConfig,
             'jsx-a11y': jsxA11yConfig,
@@ -52,12 +63,12 @@ export default [
         },
         settings: {
             react: {
-                version: "detect",
+                version: 'detect',
             },
-            formComponents: ["Form"],
+            formComponents: ['Form'],
             linkComponents: [
-                { name: "Link", linkAttribute: "to" },
-                { name: "NavLink", linkAttribute: "to" },
+                { name: 'Link', linkAttribute: 'to' },
+                { name: 'NavLink', linkAttribute: 'to' },
             ],
         },
         rules: {
@@ -71,7 +82,7 @@ export default [
 
     // Typescript
     {
-        files: ["app/**/*.{ts,tsx}"],
+        files: ['app/**/*.{ts,tsx}'],
         plugins: {
             '@typescript-eslint': tsEslintConfig,
         },
@@ -93,6 +104,7 @@ export default [
             ...tsEslintConfig.configs['eslint-recommended'].rules,
             ...tsEslintConfig.configs.recommended.rules,
             //...importConfig.configs.typescript.rules,
-        }
+        },
     },
+    eslintConfigPrettier,
 ];

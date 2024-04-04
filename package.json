@@ -20,6 +20,7 @@
         "@remix-run/cloudflare-pages": "^2.8.1",
         "@remix-run/node": "^2.8.1",
         "@remix-run/react": "^2.8.1",
+        "@tabler/icons-react": "^3.1.0",
         "classnames": "^2.5.1",
         "date-fns": "^3.6.0",
         "http-status-codes": "^2.3.0",

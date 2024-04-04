@@ -11,6 +11,9 @@ installGlobals();
 export default defineConfig({
     plugins: [remixCloudflareDevProxy(), remix(), tsconfigPaths()],
     css: {
+        modules: {
+            localsConvention: 'camelCaseOnly',
+        },
         preprocessorOptions: {
             scss: {
                 additionalData: `@import './styles/_mantine.scss';`,

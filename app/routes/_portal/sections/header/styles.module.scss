@@ -1,15 +1,23 @@
 @import './styles/consts/variables.scss';
 
-.logo {
-    height: calc(mrem(60px) - 8px);
-}
-
 .header {
+    transition: top 0.2s ease-in;
+    position: fixed;
+    top: 0px;
+    width: 100%;
     height: mrem(60px);
     padding-left: var(--mantine-spacing-md);
     padding-right: var(--mantine-spacing-md);
     border-bottom: mrem(1px) solid
         light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+    background-color: light-dark(
+        rgba(248, 249, 250, 0.7),
+        rgba(50, 50, 50, 0.7)
+    );
+}
+
+.header-hide {
+    top: mrem(-60px);
 }
 
 .link {

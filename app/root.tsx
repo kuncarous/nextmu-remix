@@ -30,10 +30,6 @@ export const links: LinksFunction = () => [
     { rel: 'icon', href: 'favicon.png' },
     { rel: 'stylesheet', href: mantineStyles },
     { rel: 'stylesheet', href: nextMuStyles },
-    {
-        rel: 'stylesheet',
-        href: 'https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css',
-    },
 ];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {

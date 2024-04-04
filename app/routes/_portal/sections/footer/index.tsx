@@ -1,7 +1,7 @@
 import { Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { CopyrightCurrentYear, CopyrightFirstYear } from '~/consts/copyright';
-import styles from './styles.module.css';
+import styles from './styles.module.scss';
 
 export default function Footer() {
     const { t } = useTranslation();

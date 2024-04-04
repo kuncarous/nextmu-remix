@@ -6,7 +6,7 @@ import {
     useRouteError,
 } from '@remix-run/react';
 import { StatusCodes } from 'http-status-codes';
-import styles from './styles.module.css';
+import styles from './styles.module.scss';
 
 const NotFoundComponent = () => {
     return (

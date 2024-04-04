@@ -6,7 +6,7 @@ import {
 import { useCallback } from 'react';
 import { IThemeMode, ThemeCookieName } from '~/consts/theme';
 import { setCookieCSR } from '~/utils/cookies';
-import styles from './styles.module.css';
+import styles from './styles.module.scss';
 
 export default function ThemeSwitch() {
     const { setColorScheme } = useMantineColorScheme();

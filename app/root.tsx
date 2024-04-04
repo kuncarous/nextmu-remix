@@ -1,6 +1,7 @@
 // Import styles of packages that you've installed.
 // All packages except `@mantine/hooks` require styles imports
 import mantineStyles from '@mantine/core/styles.css?url';
+import nextMuStyles from './styles/global.scss?url';
 
 import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import type { LinksFunction, LoaderFunctionArgs } from '@remix-run/cloudflare';
@@ -24,11 +25,11 @@ import {
     getUserFromSession,
     refreshSession,
 } from './services/auth.server';
-import './styles/global.css';
 
 export const links: LinksFunction = () => [
     { rel: 'icon', href: 'favicon.png' },
     { rel: 'stylesheet', href: mantineStyles },
+    { rel: 'stylesheet', href: nextMuStyles },
     {
         rel: 'stylesheet',
         href: 'https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css',

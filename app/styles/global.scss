@@ -1,4 +1,4 @@
-@import 'consts/variables.scss';
+@import './styles/consts/variables.scss';
 
 body {
     display: flex;
@@ -13,5 +13,4 @@ main {
     display: flex;
     flex: 1 auto;
     flex-direction: column;
-    padding-top: $header-pad;
 }

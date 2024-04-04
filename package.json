@@ -63,8 +63,6 @@
         "eslint-plugin-react-hooks": "^4.6.0",
         "node-fetch": "^3.3.2",
         "postcss": "^8.4.38",
-        "postcss-preset-mantine": "^1.13.0",
-        "postcss-simple-vars": "^7.0.1",
         "prettier": "^3.2.5",
         "prettier-plugin-organize-imports": "^3.2.4",
         "sass": "^1.72.0",

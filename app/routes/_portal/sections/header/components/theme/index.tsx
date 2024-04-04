@@ -1,8 +1,10 @@
-import { ActionIcon, rem, useMantineColorScheme } from '@mantine/core';
+import { ActionIcon, useMantineColorScheme } from '@mantine/core';
 import { IconMoon, IconSun } from '@tabler/icons-react';
+import classNames from 'classnames';
 import { useCallback } from 'react';
 import { IThemeMode, ThemeCookieName } from '~/consts/theme';
 import { setCookieCSR } from '~/utils/cookies';
+import styles from './styles.module.scss';
 
 export default function ThemeSwitch() {
     const { colorScheme, setColorScheme } = useMantineColorScheme();
@@ -15,22 +17,19 @@ export default function ThemeSwitch() {
     return (
         <>
             <ActionIcon
-                variant="outline"
                 onClick={toggleTheme}
-                size={rem(16)}
-                unstyled
+                variant="default"
+                size="lg"
+                aria-label="Toggle color scheme"
             >
-                {colorScheme !== 'dark' ? (
-                    <IconMoon
-                        style={{ width: rem(16), height: rem(16) }}
-                        stroke={1.5}
-                    />
-                ) : (
-                    <IconSun
-                        style={{ width: rem(16), height: rem(16) }}
-                        stroke={1.5}
-                    />
-                )}
+                <IconSun
+                    className={classNames(styles.icon, styles.light)}
+                    stroke={1.5}
+                />
+                <IconMoon
+                    className={classNames(styles.icon, styles.dark)}
+                    stroke={1.5}
+                />
             </ActionIcon>
         </>
     );

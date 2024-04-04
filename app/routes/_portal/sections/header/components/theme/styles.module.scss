@@ -1,0 +1,24 @@
+.icon {
+    width: mrem(22px);
+    height: mrem(22px);
+}
+
+.dark {
+    @include dark {
+        display: none;
+    }
+
+    @include light {
+        display: block;
+    }
+}
+
+.light {
+    @include light {
+        display: none;
+    }
+
+    @include dark {
+        display: block;
+    }
+}

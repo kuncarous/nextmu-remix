@@ -1,4 +1,4 @@
-import { ActionIcon, useMantineColorScheme } from '@mantine/core';
+import { ActionIcon, rem, useMantineColorScheme } from '@mantine/core';
 import { IconMoon, IconSun } from '@tabler/icons-react';
 import { useCallback } from 'react';
 import { IThemeMode, ThemeCookieName } from '~/consts/theme';
@@ -17,17 +17,17 @@ export default function ThemeSwitch() {
             <ActionIcon
                 variant="outline"
                 onClick={toggleTheme}
-                size={16}
+                size={rem(16)}
                 unstyled
             >
                 {colorScheme !== 'dark' ? (
                     <IconMoon
-                        style={{ width: '70%', height: '70%' }}
+                        style={{ width: rem(16), height: rem(16) }}
                         stroke={1.5}
                     />
                 ) : (
                     <IconSun
-                        style={{ width: '70%', height: '70%' }}
+                        style={{ width: rem(16), height: rem(16) }}
                         stroke={1.5}
                     />
                 )}

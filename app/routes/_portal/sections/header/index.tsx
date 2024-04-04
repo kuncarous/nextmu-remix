@@ -110,7 +110,7 @@ function LinkButton(props: ILinkButtonProps) {
     );
 }
 
-function RightButtons() {
+function UserMenu() {
     const theme = useMantineTheme();
     const [userMenuOpened, setUserMenuOpened] = useState(false);
     const user = useUserInfo();
@@ -274,8 +274,18 @@ function RightButtons() {
                             </Menu.Item>
                         </Menu.Dropdown>
                     </Menu>
+                    <ThemeSwitch />
                 </>
             )}
+        </>
+    );
+}
+
+function RightButtons() {
+    const user = useUserInfo();
+
+    return (
+        <>
             {user == null && (
                 <>
                     <Link to="/login">
@@ -286,7 +296,6 @@ function RightButtons() {
                     </Link>
                 </>
             )}
-            <ThemeSwitch />
         </>
     );
 }
@@ -380,15 +389,19 @@ export default function Header() {
                         </a>
                     </Group>
 
-                    <Group visibleFrom="sm">
-                        <RightButtons />
-                    </Group>
+                    <Group gap={5}>
+                        <UserMenu />
 
-                    <Burger
-                        opened={drawerOpened}
-                        onClick={toggleDrawer}
-                        hiddenFrom="sm"
-                    />
+                        <Group visibleFrom="sm">
+                            <RightButtons />
+                        </Group>
+
+                        <Burger
+                            opened={drawerOpened}
+                            onClick={toggleDrawer}
+                            hiddenFrom="sm"
+                        />
+                    </Group>
                 </Group>
             </header>
 

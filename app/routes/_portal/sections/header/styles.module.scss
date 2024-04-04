@@ -20,6 +20,27 @@
     top: mrem(-60px);
 }
 
+.user {
+    color: light-dark(var(--mantine-color-black), var(--mantine-color-dark-0));
+    padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+    border-radius: var(--mantine-radius-sm);
+    transition: background-color 100ms ease;
+
+    &:hover {
+        background-color: light-dark(
+            var(--mantine-color-gray-1),
+            var(--mantine-color-dark-8)
+        );
+    }
+}
+
+.userActive {
+    background-color: light-dark(
+        var(--mantine-color-gray-1),
+        var(--mantine-color-dark-8)
+    );
+}
+
 .link {
     display: flex;
     align-items: center;

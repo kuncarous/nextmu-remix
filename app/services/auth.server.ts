@@ -4,32 +4,18 @@ import {
     createCookieSessionStorage,
     redirect,
 } from '@remix-run/cloudflare';
-import * as jwt from 'jsonwebtoken';
 import * as oidc from 'oauth4webapi';
-import { UserInfo } from '~/providers/auth/types';
+import {
+    IUserInfo,
+    UserInfoVersion,
+    ZPublicUserInfo,
+} from '~/providers/auth/types';
 import * as url from '~/utils/url';
 import { createOrFindAccount } from './mongodb/account.server';
-
-interface IIdToken extends jwt.JwtPayload {
-    session_state: string;
-    auth_time: number;
-
-    email: string;
-    email_verified: boolean;
-
-    name: string; // John Doe
-    given_name: string; // John
-    family_name: string; // Doe
-    preferred_username: string; // johndoe1
-
-    sid: string;
-    acr: string;
-    typ: string;
-    azp: string;
-    at_hash: string;
-}
+import { getSessionFromRedis, saveSessionInRedis } from './redis/auth.server';
 
 interface ISessionRequestData {
+    redirect_url?: string;
     code_challenge_method: string;
     code_challenge: string;
     code_verifier: string;
@@ -115,7 +101,10 @@ export const getPortalApiAuthClient = async (context: AppLoadContext) => {
 };
 
 const code_challenge_method = 'S256';
-export const redirectToAuth = async (context: AppLoadContext) => {
+export const redirectToLogin = async (
+    context: AppLoadContext,
+    req?: Request,
+) => {
     try {
         const sessionRequestStorage = await getSessionRequestStorage(context);
         if (sessionRequestStorage == null) return null;
@@ -149,6 +138,7 @@ export const redirectToAuth = async (context: AppLoadContext) => {
         );
 
         const sessionRequest = await sessionRequestStorage.getSession();
+        if (req != null) sessionRequest.set('redirect_url', req.url);
         sessionRequest.set('code_challenge', code_challenge);
         sessionRequest.set('code_verifier', code_verifier);
 
@@ -169,6 +159,150 @@ export const redirectToAuth = async (context: AppLoadContext) => {
             );
             sessionRequest.set('code_challenge_method', code_challenge_method);
         }
+
+        authorizationUrl.searchParams.set('prompt', 'login');
+
+        const cookie =
+            await sessionRequestStorage.commitSession(sessionRequest);
+        return redirect(authorizationUrl.href, {
+            headers: { 'Set-Cookie': cookie },
+        });
+    } catch (error) {
+        return null;
+    }
+};
+
+export const redirectToRegister = async (
+    context: AppLoadContext,
+    req?: Request,
+) => {
+    try {
+        const sessionRequestStorage = await getSessionRequestStorage(context);
+        if (sessionRequestStorage == null) return null;
+
+        const authServer = await getAuthorizationServer(context);
+        if (authServer == null) return null;
+
+        const code_verifier = oidc.generateRandomCodeVerifier();
+        const code_challenge =
+            await oidc.calculatePKCECodeChallenge(code_verifier);
+        let nonce: string | undefined;
+
+        const authorizationUrl = new URL(authServer.authorization_endpoint!);
+        authorizationUrl.searchParams.set(
+            'client_id',
+            context.cloudflare.env.PORTAL_OPENID_CLIENT_ID!,
+        );
+        authorizationUrl.searchParams.set(
+            'redirect_uri',
+            url.resolve(context.cloudflare.env.SITE_DOMAIN!, '/login/callback'),
+        );
+        authorizationUrl.searchParams.set('response_type', 'code');
+        authorizationUrl.searchParams.set(
+            'scope',
+            [
+                'openid profile email offline_access',
+                context.cloudflare.env.PORTAL_OPENID_ADDITIONAL_SCOPES,
+            ]
+                .filter((v) => !!v)
+                .join(' '),
+        );
+
+        const sessionRequest = await sessionRequestStorage.getSession();
+        if (req != null) sessionRequest.set('redirect_url', req.url);
+        sessionRequest.set('code_challenge', code_challenge);
+        sessionRequest.set('code_verifier', code_verifier);
+
+        if (
+            authServer.code_challenge_methods_supported?.includes(
+                code_challenge_method,
+            ) == false
+        ) {
+            nonce = oidc.generateRandomNonce();
+            authorizationUrl.searchParams.set('nonce', nonce);
+            sessionRequest.set('code_challenge_method', 'nonce');
+            sessionRequest.set('nonce', nonce);
+        } else {
+            authorizationUrl.searchParams.set('code_challenge', code_challenge);
+            authorizationUrl.searchParams.set(
+                'code_challenge_method',
+                code_challenge_method,
+            );
+            sessionRequest.set('code_challenge_method', code_challenge_method);
+        }
+
+        authorizationUrl.searchParams.set('prompt', 'create');
+
+        const cookie =
+            await sessionRequestStorage.commitSession(sessionRequest);
+        return redirect(authorizationUrl.href, {
+            headers: { 'Set-Cookie': cookie },
+        });
+    } catch (error) {
+        return null;
+    }
+};
+
+export const redirectToSwitch = async (
+    context: AppLoadContext,
+    req?: Request,
+) => {
+    try {
+        const sessionRequestStorage = await getSessionRequestStorage(context);
+        if (sessionRequestStorage == null) return null;
+
+        const authServer = await getAuthorizationServer(context);
+        if (authServer == null) return null;
+
+        const code_verifier = oidc.generateRandomCodeVerifier();
+        const code_challenge =
+            await oidc.calculatePKCECodeChallenge(code_verifier);
+        let nonce: string | undefined;
+
+        const authorizationUrl = new URL(authServer.authorization_endpoint!);
+        authorizationUrl.searchParams.set(
+            'client_id',
+            context.cloudflare.env.PORTAL_OPENID_CLIENT_ID!,
+        );
+        authorizationUrl.searchParams.set(
+            'redirect_uri',
+            url.resolve(context.cloudflare.env.SITE_DOMAIN!, '/login/callback'),
+        );
+        authorizationUrl.searchParams.set('response_type', 'code');
+        authorizationUrl.searchParams.set(
+            'scope',
+            [
+                'openid profile email offline_access',
+                context.cloudflare.env.PORTAL_OPENID_ADDITIONAL_SCOPES,
+            ]
+                .filter((v) => !!v)
+                .join(' '),
+        );
+
+        const sessionRequest = await sessionRequestStorage.getSession();
+        if (req != null) sessionRequest.set('redirect_url', req.url);
+        sessionRequest.set('code_challenge', code_challenge);
+        sessionRequest.set('code_verifier', code_verifier);
+
+        if (
+            authServer.code_challenge_methods_supported?.includes(
+                code_challenge_method,
+            ) == false
+        ) {
+            nonce = oidc.generateRandomNonce();
+            authorizationUrl.searchParams.set('nonce', nonce);
+            sessionRequest.set('code_challenge_method', 'nonce');
+            sessionRequest.set('nonce', nonce);
+        } else {
+            authorizationUrl.searchParams.set('code_challenge', code_challenge);
+            authorizationUrl.searchParams.set(
+                'code_challenge_method',
+                code_challenge_method,
+            );
+            sessionRequest.set('code_challenge_method', code_challenge_method);
+        }
+
+        authorizationUrl.searchParams.set('prompt', 'select_account');
 
         const cookie =
             await sessionRequestStorage.commitSession(sessionRequest);
@@ -265,6 +399,27 @@ export const processAuthResponse = async (
             throw new Error('failed to create or find account');
         }
 
+        const userInfo: IUserInfo = {
+            version: UserInfoVersion,
+            aud: introspectionResult.aud!,
+            sub: introspectionResult.sub!,
+            email: introspectionResult.email as string | undefined,
+            email_verified: introspectionResult.email_verified as
+                | boolean
+                | undefined,
+            given_name: introspectionResult.given_name as string | undefined,
+            family_name: introspectionResult.family_name as string | undefined,
+            expire_at: introspectionResult.exp,
+            roles: Object.keys(
+                introspectionResult['urn:zitadel:iam:org:project:roles'] ?? {},
+            ),
+        };
+        await saveSessionInRedis(
+            context.cloudflare.env.OPENID_PROJECT_ID!,
+            authorizationResult.access_token,
+            userInfo,
+        );
+
         const session = await sessionStorage.getSession();
         const resultEntries = Object.entries(authorizationResult);
         for (const [key, value] of resultEntries) {
@@ -273,7 +428,10 @@ export const processAuthResponse = async (
             session.set(key, value);
         }
 
-        return redirect('/', {
+        const redirectUrl: string = sessionRequest.get(
+            'redirect_url',
+        ) as string;
+        return redirect(redirectUrl || '/', {
             headers: [
                 [
                     'Set-Cookie',
@@ -449,6 +607,13 @@ export const isAuthenticated = async (
     const sessionData = await sessionStorage.getSession(cookieHeader);
     if (sessionData.has('access_token') == false) return false;
 
+    const accessToken = sessionData.get('access_token')!;
+    const cachedSession = await getSessionFromRedis(
+        context.cloudflare.env.OPENID_PROJECT_ID!,
+        accessToken,
+    );
+    if (cachedSession != null) return true;
+
     const authServer = await getAuthorizationServer(context);
     if (authServer == null) return false;
 
@@ -476,10 +641,31 @@ export const isAuthenticated = async (
         return false;
     }
 
+    const userInfo: IUserInfo = {
+        version: UserInfoVersion,
+        aud: introspectionResult.aud!,
+        sub: introspectionResult.sub!,
+        email: introspectionResult.email as string | undefined,
+        email_verified: introspectionResult.email_verified as
+            | boolean
+            | undefined,
+        given_name: introspectionResult.given_name as string | undefined,
+        family_name: introspectionResult.family_name as string | undefined,
+        expire_at: introspectionResult.exp,
+        roles: Object.keys(
+            introspectionResult['urn:zitadel:iam:org:project:roles'] ?? {},
+        ),
+    };
+    await saveSessionInRedis(
+        context.cloudflare.env.OPENID_PROJECT_ID!,
+        accessToken,
+        userInfo,
+    );
+
     return true;
 };
 
-export const getUserFromSession = async (
+export const getPublicUserInfoFromSession = async (
     request: Request,
     context: AppLoadContext,
 ) => {
@@ -491,6 +677,13 @@ export const getUserFromSession = async (
 
     const sessionData = await sessionStorage.getSession(cookieHeader);
     if (sessionData.has('access_token') == false) return null;
+
+    const accessToken = sessionData.get('access_token')!;
+    const cachedSession = await getSessionFromRedis(
+        context.cloudflare.env.OPENID_PROJECT_ID!,
+        accessToken,
+    );
+    if (cachedSession != null) return ZPublicUserInfo.parse(cachedSession);
 
     const authServer = await getAuthorizationServer(context);
     if (authServer == null) return null;
@@ -515,16 +708,33 @@ export const getUserFromSession = async (
         apiClient,
         introspectionResponse,
     );
-    if (oidc.isOAuth2Error(introspectionResult)) {
+    if (
+        oidc.isOAuth2Error(introspectionResult) ||
+        introspectionResult.active == false
+    ) {
         return null;
     }
 
-    return {
-        email: introspectionResult.email,
-        email_verified: introspectionResult.email_verified,
-        given_name: introspectionResult.given_name,
-        family_name: introspectionResult.family_name,
+    const userInfo: IUserInfo = {
+        version: UserInfoVersion,
+        aud: introspectionResult.aud!,
+        sub: introspectionResult.sub!,
+        email: introspectionResult.email as string | undefined,
+        email_verified: introspectionResult.email_verified as
+            | boolean
+            | undefined,
+        given_name: introspectionResult.given_name as string | undefined,
+        family_name: introspectionResult.family_name as string | undefined,
         expire_at: introspectionResult.exp,
-        expired: !introspectionResult.active,
-    } as UserInfo;
+        roles: Object.keys(
+            introspectionResult['urn:zitadel:iam:org:project:roles'] ?? {},
+        ),
+    };
+    await saveSessionInRedis(
+        context.cloudflare.env.OPENID_PROJECT_ID!,
+        accessToken,
+        userInfo,
+    );
+
+    return ZPublicUserInfo.parse(userInfo);
 };

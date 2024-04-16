@@ -1,25 +1,18 @@
-import { ActionIcon, useMantineColorScheme } from '@mantine/core';
+import { ActionIcon } from '@mantine/core';
 import { IconMoon, IconSun } from '@tabler/icons-react';
 import classNames from 'classnames';
-import { useCallback } from 'react';
-import { IThemeMode, ThemeCookieName } from '~/consts/theme';
-import { setCookieCSR } from '~/utils/cookies';
+import { useToggleTheme } from '~/utils/theme';
 import styles from './styles.module.scss';
 
-export default function ThemeSwitch() {
-    const { colorScheme, setColorScheme } = useMantineColorScheme();
-    const toggleTheme = useCallback(() => {
-        const newColorScheme = colorScheme === 'light' ? 'dark' : 'light';
-        setColorScheme(newColorScheme);
-        setCookieCSR<IThemeMode>(ThemeCookieName, { mode: newColorScheme });
-    }, [colorScheme]);
+export function ThemeSwitch() {
+    const { toggleTheme } = useToggleTheme();
 
     return (
         <>
             <ActionIcon
                 onClick={toggleTheme}
                 variant="default"
-                size="lg"
+                size={36}
                 aria-label="Toggle color scheme"
             >
                 <IconSun

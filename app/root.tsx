@@ -3,7 +3,12 @@
 import mantineStyles from '@mantine/core/styles.css?url';
 import nextMuStyles from './styles/global.scss?url';
 
-import { ColorSchemeScript, MantineProvider } from '@mantine/core';
+import {
+    ColorSchemeScript,
+    MantineColorScheme,
+    MantineProvider,
+    useMantineColorScheme,
+} from '@mantine/core';
 import type { LinksFunction, LoaderFunctionArgs } from '@remix-run/cloudflare';
 import {
     Links,
@@ -16,25 +21,28 @@ import {
 } from '@remix-run/react';
 import i18next from '~/i18next.server';
 
+import { useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ClientOnly } from 'remix-utils/client-only';
 import { parseTheme } from './cookies.server';
 import { ErrorBoundary as ErrorBoundaryComponent } from './errors';
 import { UserInfoProvider } from './providers/auth';
 import {
     clearSession,
-    getUserFromSession,
+    getPublicUserInfoFromSession,
     refreshSession,
 } from './services/auth.server';
+import { setThemeColor } from './utils/theme';
 
 export const links: LinksFunction = () => [
-    { rel: 'icon', href: 'favicon.png' },
+    { rel: 'icon', href: '/favicon.png' },
     { rel: 'stylesheet', href: mantineStyles },
     { rel: 'stylesheet', href: nextMuStyles },
 ];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
-    let user = await getUserFromSession(request, context);
-    if (user != null && user.expired == true) {
+    let user = await getPublicUserInfoFromSession(request, context);
+    if (user?.expire_at != null && Date.now() * 0.001 >= user.expire_at) {
         let redirectTo = await refreshSession(request, context);
         if (redirectTo == null)
             redirectTo = await clearSession(request, context);
@@ -56,6 +64,21 @@ export const handle = {
     i18n: 'common',
 };
 
+interface IConfigureThemeFromCookieProps {
+    theme: MantineColorScheme;
+}
+export function ConfigureThemeFromCookie({
+    theme,
+}: IConfigureThemeFromCookieProps) {
+    const { colorScheme, setColorScheme } = useMantineColorScheme();
+    useLayoutEffect(() => {
+        if (theme !== colorScheme) {
+            setThemeColor(theme, setColorScheme);
+        }
+    }, []);
+    return null;
+}
+
 export default function App() {
     const { locale, theme, user } = useLoaderData<typeof loader>();
     const { i18n } = useTranslation();
@@ -74,6 +97,9 @@ export default function App() {
             </head>
             <body>
                 <MantineProvider defaultColorScheme={theme}>
+                    <ClientOnly>
+                        {() => <ConfigureThemeFromCookie theme={theme} />}
+                    </ClientOnly>
                     <UserInfoProvider userInfo={user ?? null}>
                         <Outlet />
                         <ScrollRestoration />
@@ -85,4 +111,6 @@ export default function App() {
     );
 }
 
-export const ErrorBoundary = ErrorBoundaryComponent;
+export function ErrorBoundary() {
+    return <ErrorBoundaryComponent />;
+}

@@ -1,5 +1,6 @@
 import type { MetaFunction } from '@remix-run/cloudflare';
 import { useTranslation } from 'react-i18next';
+import { ErrorBoundary as ErrorBoundaryComponent } from '../errors';
 
 export const meta: MetaFunction = () => {
     const { t } = useTranslation();
@@ -9,7 +10,7 @@ export const meta: MetaFunction = () => {
     ];
 };
 
-export default function Index() {
+export default function Page() {
     return (
         <div style={{ fontFamily: 'system-ui, sans-serif', lineHeight: '1.8' }}>
             <h1>Welcome to Remix</h1>
@@ -44,4 +45,8 @@ export default function Index() {
             </ul>
         </div>
     );
+}
+
+export function ErrorBoundary() {
+    return <ErrorBoundaryComponent />;
 }

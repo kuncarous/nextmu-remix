@@ -1,14 +1,14 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import type { UserInfo } from './types';
+import type { IPublicUserInfo } from './types';
 
-export const UserInfoContext = createContext<UserInfo | null>(null);
+export const UserInfoContext = createContext<IPublicUserInfo | null>(null);
 
 export function useUserInfo() {
     return useContext(UserInfoContext);
 }
 
 export interface UserInfoProviderProps {
-    userInfo: UserInfo | null;
+    userInfo: IPublicUserInfo | null;
     children: React.ReactNode;
 }
 

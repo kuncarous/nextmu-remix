@@ -39,7 +39,7 @@ const data = [
     },
 ];
 
-export default function Footer() {
+export function Footer() {
     const { t } = useTranslation();
 
     const groups = data.map((group) => {

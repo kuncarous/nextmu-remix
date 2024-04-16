@@ -2,10 +2,13 @@ import { useMantineColorScheme } from '@mantine/core';
 import { Link } from '@remix-run/react';
 import styles from './styles.module.scss';
 
-export function Logo() {
+interface ILogoProps {
+    to?: string;
+}
+export function Logo({ to }: ILogoProps) {
     const { colorScheme } = useMantineColorScheme();
     return (
-        <Link to="/">
+        <Link className={styles.link} to={to || '/'}>
             <img
                 className={styles.logo}
                 src={
@@ -18,10 +21,10 @@ export function Logo() {
     );
 }
 
-export function LogoSide() {
+export function LogoSide({ to }: ILogoProps) {
     const { colorScheme } = useMantineColorScheme();
     return (
-        <Link to="/">
+        <Link to={to || '/'}>
             <img
                 className={styles.logo}
                 src={

@@ -33,5 +33,5 @@ function encodeData(value: any) {
 }
 
 export function setCookieCSR<T = any>(key: string, value: T) {
-    document.cookie = `${key}=${encodeData(value)}`;
+    document.cookie = `${key}=${encodeData(value)};path=/;SameSite=Lax`;
 }

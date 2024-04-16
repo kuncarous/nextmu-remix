@@ -2,5 +2,19 @@
     "title": "NextMU",
     "description": "Enjoy playing our NextMU server!",
     "footer.message": "An Open Source project",
-    "footer.copyright": "© {{firstYear}} - {{currentYear}} NextMU. All rights reserved."
+    "footer.copyright": "© {{firstYear}} - {{currentYear}} NextMU. All rights reserved.",
+    "theme.toggle.label": "Toggle Theme",
+    "user-menu.sections.general.label": "General",
+    "user-menu.sections.general.back-home": "Back to home",
+    "user-menu.sections.dashboard.label": "Dashboard",
+    "user-menu.sections.dashboard.enter": "Go to dashboard",
+    "user-menu.sections.settings.label": "Settings",
+    "user-menu.sections.settings.account-settings": "Account settings",
+    "user-menu.sections.settings.change-account": "Change account",
+    "user-menu.sections.settings.logout": "Logout",
+    "dashboard.menu.open.label": "Open menu",
+    "dashboard.menu.close.label": "Close menu",
+    "dashboard.menu.update.title": "Updates",
+    "dashboard.menu.update.label": "Updates",
+    "dashboard.menu.update.list.label": "List"
 }

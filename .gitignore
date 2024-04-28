@@ -4,7 +4,5 @@ node_modules
 /build
 .env
 
-.wrangler
-/.dev.vars
 /pnpm-lock.yaml
 /app/proto

@@ -6,11 +6,10 @@ import {
     Title,
     rem,
 } from '@mantine/core';
-import { LoaderFunctionArgs, json } from '@remix-run/cloudflare';
+import { LoaderFunctionArgs, json } from '@remix-run/node';
 import { Link, useLoaderData, useSearchParams } from '@remix-run/react';
 import { IconPlus } from '@tabler/icons-react';
 import { StatusCodes } from 'http-status-codes';
-import { ObjectId } from 'mongodb';
 import { ChangeEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -50,16 +49,16 @@ const ZListVersions = z.object({
     size: z.coerce.number().int().multipleOf(5).min(5).max(50).default(5),
 });
 
-export async function loader({ request, context }: LoaderFunctionArgs) {
-    const accessToken = await getAccessToken(request, context);
+export async function loader({ request }: LoaderFunctionArgs) {
+    const accessToken = await getAccessToken(request);
     if (accessToken == null) {
-        return redirectToLogin(context, request);
+        return redirectToLogin(request);
     }
 
-    const user = await getPublicUserInfoFromSession(request, context);
+    const user = await getPublicUserInfoFromSession(request);
     if (user != null && !('roles' in user)) return user;
     if (user == null) {
-        return redirectToLogin(context, request);
+        return redirectToLogin(request);
     }
     if (hasDashboardRoles(user) == false) {
         throw new Response(null, {
@@ -83,7 +82,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     const [error, response] = await getVersionsList(
         parsed.data.page,
         parsed.data.size,
-        await getGameUpdateService(context),
+        await getGameUpdateService(),
         accessToken,
     );
     if (error) {
@@ -148,18 +147,7 @@ export default function Page() {
             <Flex className="grow" direction="row" gap={rem(8)}>
                 {(data?.versions.length ?? 0) === 0 && <EmptyVersionList />}
                 {data != null &&
-                    data.versions.map((version) => {
-                        const id = useMemo(
-                            () =>
-                                new ObjectId(
-                                    Buffer.from(version.id.data),
-                                ).toHexString(),
-                            [version.id],
-                        );
-                        return (
-                            <VersionCard key={id} id={id} version={version} />
-                        );
-                    })}
+                    data.versions.map((version) => <VersionCard key={version.id} version={version} />)}
             </Flex>
         </Flex>
     );

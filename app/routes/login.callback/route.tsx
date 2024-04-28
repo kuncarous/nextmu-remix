@@ -1,6 +1,6 @@
-import { LoaderFunctionArgs } from '@remix-run/cloudflare';
+import { LoaderFunctionArgs } from '@remix-run/node';
 import { processAuthResponse } from '~/services/auth.server';
 
-export async function loader({ request, context }: LoaderFunctionArgs) {
-    return processAuthResponse(request, context);
+export async function loader({ request }: LoaderFunctionArgs) {
+    return processAuthResponse(request);
 }

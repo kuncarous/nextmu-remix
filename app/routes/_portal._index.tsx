@@ -1,4 +1,4 @@
-import type { MetaFunction } from '@remix-run/cloudflare';
+import type { MetaFunction } from '@remix-run/node';
 import { useTranslation } from 'react-i18next';
 import { ErrorBoundary as ErrorBoundaryComponent } from '../errors';
 

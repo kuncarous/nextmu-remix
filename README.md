@@ -1,50 +1,46 @@
-# NextMU Remix Cloudflare Web + REST API
+# NextMU Remix Web + REST API
 
 ## pnpm
+
 You will need pnpm, if you want to use npm or yarn you will need to moidfy `package.json` file.
 https://pnpm.io/installation
-
-## Typegen
-
-Generate types for your Cloudflare bindings in `wrangler.toml`:
-
-```sh
-npm run typegen
-```
-
-You will need to rerun typegen whenever you make changes to `wrangler.toml`.
 
 ## Development
 
 Run the Vite dev server:
 
 ```sh
-npm run dev
+pnpm run dev
 ```
 
 To run Wrangler:
 
 ```sh
-npm run build
-npm run start
+pnpm run build
+pnpm run start
 ```
 
 ## Deployment
 
-> [!WARNING]  
-> Cloudflare does _not_ use `wrangler.toml` to configure deployment bindings.
-> You **MUST** [configure deployment bindings manually in the Cloudflare dashboard][bindings].
-
 First, build your app for production:
 
 ```sh
-npm run build
+pnpm run build
 ```
 
-Then, deploy your app to Cloudflare Pages:
+Then run the app in production mode:
 
 ```sh
-npm run deploy
+pnpm start
 ```
 
-[bindings]: https://developers.cloudflare.com/pages/functions/bindings/
+Now you'll need to pick a host to deploy it to.
+
+### DIY
+
+If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
+
+Make sure to deploy the output of `pnpm run build`
+
+-   `build/server`
+-   `build/client`

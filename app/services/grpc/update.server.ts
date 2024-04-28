@@ -1,7 +1,5 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
-import { AppLoadContext } from '@remix-run/cloudflare';
-import { ObjectId } from 'mongodb';
 import type { FetchVersionRequest } from '~/proto/nextmu/v1/FetchVersionRequest';
 import type { FetchVersionResponse__Output as FetchVersionResponse } from '~/proto/nextmu/v1/FetchVersionResponse';
 import type { ListVersionsRequest } from '~/proto/nextmu/v1/ListVersionsRequest';
@@ -11,6 +9,7 @@ import type { ProtoGrpcType } from '~/proto/update';
 import { promisifyRpc } from '~/utils/grpc.server';
 import { defaultProtoLoaderConfig } from './config.server';
 
+const deadline = 5000;
 const updateDefinition = protoLoader.loadSync(
     'proto/models/update.proto',
     defaultProtoLoaderConfig,
@@ -20,31 +19,61 @@ const updateProto = grpc.loadPackageDefinition(
 ) as unknown as ProtoGrpcType;
 
 let gameUpdateService: UpdateServiceClient | null = null;
-export const getGameUpdateService = async (context: AppLoadContext) => {
+export const getGameUpdateService = async () => {
     if (gameUpdateService != null) return gameUpdateService;
-    gameUpdateService = new updateProto.nextmu.v1.UpdateService(
-        context.cloudflare.env.UPDATESERVICE_GAME_ADDRESS!,
+    const service = new updateProto.nextmu.v1.UpdateService(
+        process.env.UPDATESERVICE_GAME_ADDRESS!,
         grpc.credentials.createInsecure(),
     );
-    return gameUpdateService;
+    try {
+        await new Promise<void>((resolve, error) =>
+            service.waitForReady(Date.now() + deadline, (err) =>
+                err ? error(err) : resolve(),
+            ),
+        );
+        gameUpdateService = service;
+        return gameUpdateService;
+    } catch (e) {
+        return null;
+    }
 };
 
 let launcherUpdateService: UpdateServiceClient | null = null;
-export const getLauncherUpdateService = async (context: AppLoadContext) => {
+export const getLauncherUpdateService = async () => {
     if (launcherUpdateService != null) return launcherUpdateService;
-    gameUpdateService = new updateProto.nextmu.v1.UpdateService(
-        context.cloudflare.env.UPDATESERVICE_LAUNCHER_ADDRESS!,
+    const service = new updateProto.nextmu.v1.UpdateService(
+        process.env.UPDATESERVICE_LAUNCHER_ADDRESS!,
         grpc.credentials.createInsecure(),
     );
-    return launcherUpdateService;
+    try {
+        await new Promise<void>((resolve, error) =>
+            service.waitForReady(Date.now() + deadline, (err) =>
+                err ? error(err) : resolve(),
+            ),
+        );
+        launcherUpdateService = service;
+        return launcherUpdateService;
+    } catch (e) {
+        return null;
+    }
 };
 
 export const getVersionsList = async (
     page: number,
     size: number,
-    client: UpdateServiceClient,
+    client: UpdateServiceClient | null,
     accessToken: string,
-) => {
+): Promise<[grpc.ServiceError | null, ListVersionsResponse | undefined]> => {
+    if (client == null) {
+        return [
+            {
+                code: grpc.status.UNAVAILABLE,
+                details: 'service is unavailable, try again later',
+            } as grpc.ServiceError,
+            undefined,
+        ];
+    }
+
     const request: ListVersionsRequest = {
         page,
         size,
@@ -63,11 +92,21 @@ export const getVersionsList = async (
 
 export const fetchVersion = async (
     id: string,
-    client: UpdateServiceClient,
+    client: UpdateServiceClient | null,
     accessToken: string,
-) => {
+): Promise<[grpc.ServiceError | null, FetchVersionResponse | undefined]> => {
+    if (client == null) {
+        return [
+            {
+                code: grpc.status.UNAVAILABLE,
+                details: 'service is unavailable, try again later',
+            } as grpc.ServiceError,
+            undefined,
+        ];
+    }
+
     const request: FetchVersionRequest = {
-        id: new ObjectId(id).id,
+        id,
     };
 
     const metadata = new grpc.Metadata();

@@ -11,10 +11,6 @@ import {
     useMantineColorScheme,
 } from '@mantine/core';
 import {
-    type LinksFunction,
-    type LoaderFunctionArgs,
-} from '@remix-run/cloudflare';
-import {
     Links,
     Meta,
     Outlet,
@@ -25,6 +21,7 @@ import {
 } from '@remix-run/react';
 import i18next from '~/i18next.server';
 
+import type { LinksFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ClientOnly } from 'remix-utils/client-only';
@@ -41,8 +38,8 @@ export const links: LinksFunction = () => [
     { rel: 'stylesheet', href: nextMuStyles },
 ];
 
-export async function loader({ request, context }: LoaderFunctionArgs) {
-    const user = await getPublicUserInfoFromSession(request, context);
+export async function loader({ request }: LoaderFunctionArgs) {
+    const user = await getPublicUserInfoFromSession(request);
     if (user != null && !('roles' in user)) return user;
 
     const cookieHeader = request.headers.get('Cookie');

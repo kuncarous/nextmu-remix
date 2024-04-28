@@ -1,4 +1,4 @@
-import { LoaderFunctionArgs, redirect } from '@remix-run/cloudflare';
+import { LoaderFunctionArgs, redirect } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import {
     getPublicUserInfoFromSession,
@@ -6,11 +6,11 @@ import {
 } from '~/services/auth.server';
 import { hasDashboardRoles } from '~/utils/dashboard';
 
-export async function loader({ request, context }: LoaderFunctionArgs) {
-    const user = await getPublicUserInfoFromSession(request, context);
+export async function loader({ request }: LoaderFunctionArgs) {
+    const user = await getPublicUserInfoFromSession(request);
     if (user != null && !('roles' in user)) return user;
     if (user == null) {
-        return redirectToLogin(context, request);
+        return redirectToLogin(request);
     }
     if (hasDashboardRoles(user) == false) {
         throw new Response(null, {

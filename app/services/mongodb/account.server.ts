@@ -1,4 +1,3 @@
-import { AppLoadContext } from '@remix-run/cloudflare';
 import { ObjectId } from 'mongodb';
 import type { IntrospectionResponse } from 'oauth4webapi';
 import { getMongoClient } from './client.server';
@@ -11,22 +10,19 @@ interface IAccount {
 
 export const createOrFindAccount = async (
     session: IntrospectionResponse,
-    context: AppLoadContext,
 ) => {
     try {
-        const mongoClient = await getMongoClient(context);
+        const mongoClient = await getMongoClient();
         const collection = mongoClient
             .db('portal')
             .collection<IAccount>('accounts');
 
         const aud =
             session.aud == null
-                ? context.cloudflare.env.OPENID_PROJECT_ID!
+                ? process.env.OPENID_PROJECT_ID!
                 : Array.isArray(session.aud)
-                  ? session.aud.includes(
-                        context.cloudflare.env.OPENID_PROJECT_ID!,
-                    )
-                      ? context.cloudflare.env.OPENID_PROJECT_ID!
+                  ? session.aud.includes(process.env.OPENID_PROJECT_ID!)
+                      ? process.env.OPENID_PROJECT_ID!
                       : session.aud[session.aud.length - 1]
                   : session.aud;
         const updateResult = await collection.updateOne(
@@ -60,10 +56,9 @@ export const createOrFindAccount = async (
 
 export const findAccount = async (
     accountId: ObjectId,
-    context: AppLoadContext,
 ) => {
     try {
-        const mongoClient = await getMongoClient(context);
+        const mongoClient = await getMongoClient();
         const collection = mongoClient
             .db('portal')
             .collection<IAccount>('accounts');
@@ -82,10 +77,9 @@ export const findAccount = async (
 
 export const checkAccountExists = async (
     accountId: ObjectId,
-    context: AppLoadContext,
 ) => {
     try {
-        const mongoClient = await getMongoClient(context);
+        const mongoClient = await getMongoClient();
         const collection = mongoClient
             .db('portal')
             .collection<IAccount>('accounts');

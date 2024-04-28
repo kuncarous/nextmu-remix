@@ -5,25 +5,22 @@
     "sideEffects": false,
     "type": "module",
     "scripts": {
-        "preinstall": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0",
         "build:proto": "cross-env PROTO_PATH=./app/proto tsx ./proto/proto-generator.ts",
         "prebuild": "cross-env PROTO_PATH=./app/proto tsx ./proto/proto-generator.ts",
         "build": "remix vite:build",
-        "deploy": "wrangler pages deploy ./build/client",
         "dev": "remix vite:dev",
         "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
-        "start": "wrangler pages dev ./build/client",
-        "typecheck": "tsc",
-        "typegen": "wrangler types"
+        "start": "remix-serve ./build/server/index.js",
+        "typecheck": "tsc"
     },
     "dependencies": {
         "@grpc/grpc-js": "^1.10.6",
         "@grpc/proto-loader": "^0.7.12",
         "@mantine/core": "^7.8.1",
         "@mantine/hooks": "^7.8.1",
-        "@remix-run/cloudflare": "^2.9.1",
-        "@remix-run/cloudflare-pages": "^2.9.1",
+        "@remix-run/node": "^2.9.1",
         "@remix-run/react": "^2.9.1",
+        "@remix-run/serve": "^2.9.1",
         "@remix-run/server-runtime": "^2.9.1",
         "@tabler/icons-react": "^3.2.0",
         "classnames": "^2.5.1",
@@ -55,7 +52,6 @@
         "zod-form-data": "^2.0.2"
     },
     "devDependencies": {
-        "@cloudflare/workers-types": "^4.20240423.0",
         "@eslint/js": "^9.1.1",
         "@remix-run/dev": "^2.9.1",
         "@stylistic/eslint-plugin": "^1.7.2",
@@ -67,8 +63,6 @@
         "@typescript-eslint/parser": "^7.7.1",
         "autoprefixer": "^10.4.19",
         "cross-env": "^7.0.3",
-        "csstype": "^3.1.3",
-        "esbuild": "^0.20.2",
         "eslint": "^9.1.1",
         "eslint-config-flat-gitignore": "0.1.5",
         "eslint-config-prettier": "^9.1.0",
@@ -79,7 +73,6 @@
         "eslint-plugin-react-hooks": "^4.6.2",
         "eslint-plugin-tailwindcss": "^3.15.1",
         "globals": "^15.0.0",
-        "node-fetch": "^3.3.2",
         "postcss": "^8.4.38",
         "prettier": "^3.2.5",
         "prettier-plugin-organize-imports": "^3.2.4",
@@ -88,8 +81,7 @@
         "tsx": "^4.7.3",
         "typescript": "^5.4.5",
         "vite": "^5.2.10",
-        "vite-tsconfig-paths": "^4.3.2",
-        "wrangler": "^3.52.0"
+        "vite-tsconfig-paths": "^4.3.2"
     },
     "engines": {
         "node": ">=18.0.0"

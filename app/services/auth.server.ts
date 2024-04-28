@@ -3,7 +3,7 @@ import {
     SessionStorage,
     createCookieSessionStorage,
     redirect,
-} from '@remix-run/cloudflare';
+} from '@remix-run/node';
 import * as oidc from 'oauth4webapi';
 import {
     IUserInfo,
@@ -23,7 +23,7 @@ interface ISessionRequestData {
 }
 
 let sessionRequestStorage: SessionStorage<ISessionRequestData> | null = null;
-export const getSessionRequestStorage = async (context: AppLoadContext) => {
+export const getSessionRequestStorage = async () => {
     if (sessionRequestStorage != null) return sessionRequestStorage;
     sessionRequestStorage = createCookieSessionStorage<ISessionRequestData>({
         cookie: {
@@ -31,8 +31,8 @@ export const getSessionRequestStorage = async (context: AppLoadContext) => {
             sameSite: 'lax', // this helps with CSRF
             path: '/', // remember to add this so the cookie will work in all routes
             httpOnly: true, // for security reasons, make this cookie http only
-            secrets: [context.cloudflare.env.SESSION_REQUEST_COOKIE_SECRET], // replace this with an actual secret
-            secure: context.cloudflare.env.NODE_ENV === 'production', // enable this in prod only
+            secrets: [process.env.SESSION_REQUEST_COOKIE_SECRET!], // replace this with an actual secret
+            secure: process.env.NODE_ENV === 'production', // enable this in prod only
         },
     });
     return sessionRequestStorage;
@@ -40,7 +40,7 @@ export const getSessionRequestStorage = async (context: AppLoadContext) => {
 
 let sessionStorage: SessionStorage<oidc.OpenIDTokenEndpointResponse> | null =
     null;
-export const getSessionStorage = async (context: AppLoadContext) => {
+export const getSessionStorage = async () => {
     if (sessionStorage != null) return sessionStorage;
     sessionStorage =
         createCookieSessionStorage<oidc.OpenIDTokenEndpointResponse>({
@@ -49,19 +49,19 @@ export const getSessionStorage = async (context: AppLoadContext) => {
                 sameSite: 'lax', // this helps with CSRF
                 path: '/', // remember to add this so the cookie will work in all routes
                 httpOnly: true, // for security reasons, make this cookie http only
-                secrets: [context.cloudflare.env.SESSION_COOKIE_SECRET], // replace this with an actual secret
-                secure: context.cloudflare.env.NODE_ENV === 'production', // enable this in prod only
+                secrets: [process.env.SESSION_COOKIE_SECRET!], // replace this with an actual secret
+                secure: process.env.NODE_ENV === 'production', // enable this in prod only
             },
         });
     return sessionStorage;
 };
 
 let authorizationServer: oidc.AuthorizationServer | null = null;
-export const getAuthorizationServer = async (context: AppLoadContext) => {
+export const getAuthorizationServer = async () => {
     try {
         if (authorizationServer != null) return authorizationServer;
 
-        const url = new URL(context.cloudflare.env.OPENID_ISSUER_URL!);
+        const url = new URL(process.env.OPENID_ISSUER_URL!);
         const response = await oidc.discoveryRequest(url);
         if (!response.ok) {
             return null;
@@ -74,26 +74,24 @@ export const getAuthorizationServer = async (context: AppLoadContext) => {
 };
 
 let portalAuthClient: oidc.Client | null = null;
-export const getPortalAuthClient = async (context: AppLoadContext) => {
+export const getPortalAuthClient = async () => {
     if (portalAuthClient != null) return portalAuthClient;
     portalAuthClient = {
-        client_id: context.cloudflare.env.PORTAL_OPENID_CLIENT_ID!,
-        client_secret:
-            context.cloudflare.env.PORTAL_OPENID_CLIENT_SECRET || undefined,
-        token_endpoint_auth_method: (context.cloudflare.env
-            .PORTAL_OPENID_AUTH_METHOD ||
+        client_id: process.env.PORTAL_OPENID_CLIENT_ID!,
+        client_secret: process.env.PORTAL_OPENID_CLIENT_SECRET || undefined,
+        token_endpoint_auth_method: (process.env.PORTAL_OPENID_AUTH_METHOD ||
             'none') as oidc.ClientAuthenticationMethod,
     };
     return portalAuthClient;
 };
 
 let portalApiAuthClient: oidc.Client | null = null;
-export const getPortalApiAuthClient = async (context: AppLoadContext) => {
+export const getPortalApiAuthClient = async () => {
     if (portalApiAuthClient != null) return portalApiAuthClient;
     portalApiAuthClient = {
-        client_id: context.cloudflare.env.PORTAL_API_OPENID_CLIENT_ID!,
-        client_secret: context.cloudflare.env.PORTAL_API_OPENID_CLIENT_SECRET!,
-        token_endpoint_auth_method: (context.cloudflare.env
+        client_id: process.env.PORTAL_API_OPENID_CLIENT_ID!,
+        client_secret: process.env.PORTAL_API_OPENID_CLIENT_SECRET!,
+        token_endpoint_auth_method: (process.env
             .PORTAL_API_OPENID_AUTH_METHOD ||
             'client_secret_basic') as oidc.ClientAuthenticationMethod,
     };
@@ -102,10 +100,9 @@ export const getPortalApiAuthClient = async (context: AppLoadContext) => {
 
 export const getAccessToken = async (
     request: Request,
-    context: AppLoadContext,
 ) => {
     try {
-        const sessionStorage = await getSessionStorage(context);
+        const sessionStorage = await getSessionStorage();
         if (sessionStorage == null) return null;
 
         const cookieHeader = request.headers.get('Cookie');
@@ -122,14 +119,13 @@ export const getAccessToken = async (
 
 const code_challenge_method = 'S256';
 export const redirectToLogin = async (
-    context: AppLoadContext,
     req?: Request,
 ) => {
     try {
-        const sessionRequestStorage = await getSessionRequestStorage(context);
+        const sessionRequestStorage = await getSessionRequestStorage();
         if (sessionRequestStorage == null) return null;
 
-        const authServer = await getAuthorizationServer(context);
+        const authServer = await getAuthorizationServer();
         if (authServer == null) return null;
 
         const code_verifier = oidc.generateRandomCodeVerifier();
@@ -140,18 +136,18 @@ export const redirectToLogin = async (
         const authorizationUrl = new URL(authServer.authorization_endpoint!);
         authorizationUrl.searchParams.set(
             'client_id',
-            context.cloudflare.env.PORTAL_OPENID_CLIENT_ID!,
+            process.env.PORTAL_OPENID_CLIENT_ID!,
         );
         authorizationUrl.searchParams.set(
             'redirect_uri',
-            url.resolve(context.cloudflare.env.SITE_DOMAIN!, '/login/callback'),
+            url.resolve(process.env.SITE_DOMAIN!, '/login/callback'),
         );
         authorizationUrl.searchParams.set('response_type', 'code');
         authorizationUrl.searchParams.set(
             'scope',
             [
                 'openid profile email offline_access',
-                context.cloudflare.env.PORTAL_OPENID_ADDITIONAL_SCOPES,
+                process.env.PORTAL_OPENID_ADDITIONAL_SCOPES,
             ]
                 .filter((v) => !!v)
                 .join(' '),
@@ -193,14 +189,13 @@ export const redirectToLogin = async (
 };
 
 export const redirectToRegister = async (
-    context: AppLoadContext,
     req?: Request,
 ) => {
     try {
-        const sessionRequestStorage = await getSessionRequestStorage(context);
+        const sessionRequestStorage = await getSessionRequestStorage();
         if (sessionRequestStorage == null) return null;
 
-        const authServer = await getAuthorizationServer(context);
+        const authServer = await getAuthorizationServer();
         if (authServer == null) return null;
 
         const code_verifier = oidc.generateRandomCodeVerifier();
@@ -211,18 +206,18 @@ export const redirectToRegister = async (
         const authorizationUrl = new URL(authServer.authorization_endpoint!);
         authorizationUrl.searchParams.set(
             'client_id',
-            context.cloudflare.env.PORTAL_OPENID_CLIENT_ID!,
+            process.env.PORTAL_OPENID_CLIENT_ID!,
         );
         authorizationUrl.searchParams.set(
             'redirect_uri',
-            url.resolve(context.cloudflare.env.SITE_DOMAIN!, '/login/callback'),
+            url.resolve(process.env.SITE_DOMAIN!, '/login/callback'),
         );
         authorizationUrl.searchParams.set('response_type', 'code');
         authorizationUrl.searchParams.set(
             'scope',
             [
                 'openid profile email offline_access',
-                context.cloudflare.env.PORTAL_OPENID_ADDITIONAL_SCOPES,
+                process.env.PORTAL_OPENID_ADDITIONAL_SCOPES,
             ]
                 .filter((v) => !!v)
                 .join(' '),
@@ -264,14 +259,13 @@ export const redirectToRegister = async (
 };
 
 export const redirectToSwitch = async (
-    context: AppLoadContext,
     req?: Request,
 ) => {
     try {
-        const sessionRequestStorage = await getSessionRequestStorage(context);
+        const sessionRequestStorage = await getSessionRequestStorage();
         if (sessionRequestStorage == null) return null;
 
-        const authServer = await getAuthorizationServer(context);
+        const authServer = await getAuthorizationServer();
         if (authServer == null) return null;
 
         const code_verifier = oidc.generateRandomCodeVerifier();
@@ -282,18 +276,18 @@ export const redirectToSwitch = async (
         const authorizationUrl = new URL(authServer.authorization_endpoint!);
         authorizationUrl.searchParams.set(
             'client_id',
-            context.cloudflare.env.PORTAL_OPENID_CLIENT_ID!,
+            process.env.PORTAL_OPENID_CLIENT_ID!,
         );
         authorizationUrl.searchParams.set(
             'redirect_uri',
-            url.resolve(context.cloudflare.env.SITE_DOMAIN!, '/login/callback'),
+            url.resolve(process.env.SITE_DOMAIN!, '/login/callback'),
         );
         authorizationUrl.searchParams.set('response_type', 'code');
         authorizationUrl.searchParams.set(
             'scope',
             [
                 'openid profile email offline_access',
-                context.cloudflare.env.PORTAL_OPENID_ADDITIONAL_SCOPES,
+                process.env.PORTAL_OPENID_ADDITIONAL_SCOPES,
             ]
                 .filter((v) => !!v)
                 .join(' '),
@@ -336,22 +330,21 @@ export const redirectToSwitch = async (
 
 export const processAuthResponse = async (
     request: Request,
-    context: AppLoadContext,
 ) => {
-    const sessionRequestStorage = await getSessionRequestStorage(context);
+    const sessionRequestStorage = await getSessionRequestStorage();
     if (sessionRequestStorage == null) return redirect('/');
 
-    const sessionStorage = await getSessionStorage(context);
+    const sessionStorage = await getSessionStorage();
     if (sessionStorage == null) return redirect('/');
 
     const cookieHeader = request.headers.get('Cookie');
     const sessionRequest = await sessionRequestStorage.getSession(cookieHeader);
 
     try {
-        const authServer = await getAuthorizationServer(context);
+        const authServer = await getAuthorizationServer();
         if (authServer == null) throw new Error('missing auth server metadata');
 
-        const client = await getPortalAuthClient(context);
+        const client = await getPortalAuthClient();
         const currentUrl = new URL(request.url);
         const params = oidc.validateAuthResponse(
             authServer,
@@ -366,7 +359,7 @@ export const processAuthResponse = async (
             authServer,
             client,
             params,
-            url.resolve(context.cloudflare.env.SITE_DOMAIN!, '/login/callback'),
+            url.resolve(process.env.SITE_DOMAIN!, '/login/callback'),
             sessionRequest.get('code_verifier')!,
         );
         if (!authorizationResponse.ok) {
@@ -385,7 +378,7 @@ export const processAuthResponse = async (
             throw new Error('failed to process authorization code response');
         }
 
-        const apiClient = await getPortalApiAuthClient(context);
+        const apiClient = await getPortalApiAuthClient();
         const introspectionResponse = await oidc.introspectionRequest(
             authServer,
             apiClient,
@@ -414,7 +407,6 @@ export const processAuthResponse = async (
 
         const accountId = await createOrFindAccount(
             introspectionResult as oidc.IntrospectionResponse,
-            context,
         );
         if (accountId == null) {
             throw new Error('failed to create or find account');
@@ -436,8 +428,7 @@ export const processAuthResponse = async (
             ),
         };
         await saveSessionInRedis(
-            context,
-            context.cloudflare.env.OPENID_PROJECT_ID!,
+            process.env.OPENID_PROJECT_ID!,
             authorizationResult.access_token,
             userInfo,
         );
@@ -471,13 +462,12 @@ export const processAuthResponse = async (
 
 export const redirectToLogout = async (
     request: Request,
-    context: AppLoadContext,
 ) => {
     try {
-        const sessionStorage = await getSessionStorage(context);
+        const sessionStorage = await getSessionStorage();
         if (sessionStorage == null) return null;
 
-        const authServer = await getAuthorizationServer(context);
+        const authServer = await getAuthorizationServer();
         if (authServer == null) return null;
 
         const cookieHeader = request.headers.get('Cookie');
@@ -489,14 +479,11 @@ export const redirectToLogout = async (
         const endSessionUrl = new URL(authServer.end_session_endpoint!);
         endSessionUrl.searchParams.set(
             'client_id',
-            context.cloudflare.env.PORTAL_OPENID_CLIENT_ID!,
+            process.env.PORTAL_OPENID_CLIENT_ID!,
         );
         endSessionUrl.searchParams.set(
             'post_logout_redirect_uri',
-            url.resolve(
-                context.cloudflare.env.SITE_DOMAIN!,
-                '/logout/callback',
-            ),
+            url.resolve(process.env.SITE_DOMAIN!, '/logout/callback'),
         );
         if (sessionData.has('id_token'))
             endSessionUrl.searchParams.set(
@@ -512,9 +499,8 @@ export const redirectToLogout = async (
 
 export const processLogoutResponse = async (
     request: Request,
-    context: AppLoadContext,
 ) => {
-    const sessionStorage = await getSessionStorage(context);
+    const sessionStorage = await getSessionStorage();
     if (sessionStorage == null) return redirect('/');
 
     const cookieHeader = request.headers.get('Cookie');
@@ -526,12 +512,11 @@ export const processLogoutResponse = async (
 
 export const refreshSession = async (
     request: Request,
-    context: AppLoadContext,
 ) => {
-    const authServer = await getAuthorizationServer(context);
+    const authServer = await getAuthorizationServer();
     if (authServer == null) return null;
 
-    const sessionStorage = await getSessionStorage(context);
+    const sessionStorage = await getSessionStorage();
     if (sessionStorage == null) return null;
 
     const cookieHeader = request.headers.get('Cookie');
@@ -540,7 +525,7 @@ export const refreshSession = async (
     const sessionData = await sessionStorage.getSession(cookieHeader);
     if (sessionData.has('refresh_token') == false) return null;
 
-    const client = await getPortalAuthClient(context);
+    const client = await getPortalAuthClient();
     const response = await oidc.refreshTokenGrantRequest(
         authServer,
         client,
@@ -568,12 +553,11 @@ export const refreshSession = async (
 
 export const clearSession = async (
     request: Request,
-    context: AppLoadContext,
 ) => {
-    const authServer = await getAuthorizationServer(context);
+    const authServer = await getAuthorizationServer();
     if (authServer == null) return null;
 
-    const sessionStorage = await getSessionStorage(context);
+    const sessionStorage = await getSessionStorage();
     if (sessionStorage == null) return null;
 
     const cookieHeader = request.headers.get('Cookie');
@@ -587,17 +571,16 @@ export const clearSession = async (
 };
 
 export const getUserInfo = async (
-    context: AppLoadContext,
     accessToken: string,
     options?: oidc.UserInfoRequestOptions,
 ) => {
     try {
-        const authServer = await getAuthorizationServer(context);
+        const authServer = await getAuthorizationServer();
         if (authServer == null) return null;
 
         const response = await oidc.userInfoRequest(
             authServer,
-            await getPortalAuthClient(context),
+            await getPortalAuthClient(),
             accessToken,
             options,
         );
@@ -606,7 +589,7 @@ export const getUserInfo = async (
         }
 
         return await oidc.processDiscoveryResponse(
-            new URL(context.cloudflare.env.PORTAL_OPENID_ISSUER_URL!),
+            new URL(process.env.PORTAL_OPENID_ISSUER_URL!),
             response,
         );
     } catch (error) {
@@ -616,25 +599,23 @@ export const getUserInfo = async (
 
 export const isAuthenticated = async (
     request: Request,
-    context: AppLoadContext,
     accessToken: string | null = null,
 ) => {
     if (accessToken == null) {
-        accessToken = await getAccessToken(request, context);
+        accessToken = await getAccessToken(request);
     }
     if (accessToken == null) return false;
 
     const cachedSession = await getSessionFromRedis(
-        context,
-        context.cloudflare.env.OPENID_PROJECT_ID!,
+        process.env.OPENID_PROJECT_ID!,
         accessToken,
     );
     if (cachedSession != null) return true;
 
-    const authServer = await getAuthorizationServer(context);
+    const authServer = await getAuthorizationServer();
     if (authServer == null) return false;
 
-    const apiClient = await getPortalApiAuthClient(context);
+    const apiClient = await getPortalApiAuthClient();
     const introspectionResponse = await oidc.introspectionRequest(
         authServer,
         apiClient,
@@ -659,7 +640,7 @@ export const isAuthenticated = async (
     }
 
     if (introspectionResult.active == false) {
-        return await refreshSession(request, context);
+        return await refreshSession(request);
     }
 
     const userInfo: IUserInfo = {
@@ -678,8 +659,7 @@ export const isAuthenticated = async (
         ),
     };
     await saveSessionInRedis(
-        context,
-        context.cloudflare.env.OPENID_PROJECT_ID!,
+        process.env.OPENID_PROJECT_ID!,
         accessToken,
         userInfo,
     );
@@ -689,25 +669,23 @@ export const isAuthenticated = async (
 
 export const getPublicUserInfoFromSession = async (
     request: Request,
-    context: AppLoadContext,
     accessToken: string | null = null,
 ) => {
     if (accessToken == null) {
-        accessToken = await getAccessToken(request, context);
+        accessToken = await getAccessToken(request);
     }
     if (accessToken == null) return null;
 
     const cachedSession = await getSessionFromRedis(
-        context,
-        context.cloudflare.env.OPENID_PROJECT_ID!,
+        process.env.OPENID_PROJECT_ID!,
         accessToken,
     );
     if (cachedSession != null) return ZPublicUserInfo.parse(cachedSession);
 
-    const authServer = await getAuthorizationServer(context);
+    const authServer = await getAuthorizationServer();
     if (authServer == null) return null;
 
-    const apiClient = await getPortalApiAuthClient(context);
+    const apiClient = await getPortalApiAuthClient();
     const introspectionResponse = await oidc.introspectionRequest(
         authServer,
         apiClient,
@@ -732,9 +710,9 @@ export const getPublicUserInfoFromSession = async (
     }
 
     if (introspectionResult.active == false) {
-        const response = await refreshSession(request, context);
+        const response = await refreshSession(request);
         if (response != null) return response;
-        return await clearSession(request, context);
+        return await clearSession(request);
     }
 
     const userInfo: IUserInfo = {
@@ -756,14 +734,13 @@ export const getPublicUserInfoFromSession = async (
         userInfo.expire_at != null &&
         Date.now() * 0.001 >= userInfo.expire_at
     ) {
-        const response = await refreshSession(request, context);
+        const response = await refreshSession(request);
         if (response != null) return response;
-        return await clearSession(request, context);
+        return await clearSession(request);
     }
 
     await saveSessionInRedis(
-        context,
-        context.cloudflare.env.OPENID_PROJECT_ID!,
+        process.env.OPENID_PROJECT_ID!,
         accessToken,
         userInfo,
     );

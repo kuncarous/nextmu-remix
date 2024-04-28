@@ -2,6 +2,7 @@
 // All packages except `@mantine/hooks` require styles imports
 import mantineStyles from '@mantine/core/styles.css?url';
 import nextMuStyles from './styles/global.scss?url';
+import tailwindStylesheet from './styles/tailwind.css?url';
 
 import {
     ColorSchemeScript,
@@ -9,7 +10,10 @@ import {
     MantineProvider,
     useMantineColorScheme,
 } from '@mantine/core';
-import type { LinksFunction, LoaderFunctionArgs } from '@remix-run/cloudflare';
+import {
+    type LinksFunction,
+    type LoaderFunctionArgs,
+} from '@remix-run/cloudflare';
 import {
     Links,
     Meta,
@@ -27,28 +31,19 @@ import { ClientOnly } from 'remix-utils/client-only';
 import { parseTheme } from './cookies.server';
 import { ErrorBoundary as ErrorBoundaryComponent } from './errors';
 import { UserInfoProvider } from './providers/auth';
-import {
-    clearSession,
-    getPublicUserInfoFromSession,
-    refreshSession,
-} from './services/auth.server';
+import { getPublicUserInfoFromSession } from './services/auth.server';
 import { setThemeColor } from './utils/theme';
 
 export const links: LinksFunction = () => [
     { rel: 'icon', href: '/favicon.png' },
+    { rel: 'stylesheet', href: tailwindStylesheet },
     { rel: 'stylesheet', href: mantineStyles },
     { rel: 'stylesheet', href: nextMuStyles },
 ];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
-    let user = await getPublicUserInfoFromSession(request, context);
-    if (user?.expire_at != null && Date.now() * 0.001 >= user.expire_at) {
-        let redirectTo = await refreshSession(request, context);
-        if (redirectTo == null)
-            redirectTo = await clearSession(request, context);
-        if (redirectTo != null) return redirectTo;
-        user = null;
-    }
+    const user = await getPublicUserInfoFromSession(request, context);
+    if (user != null && !('roles' in user)) return user;
 
     const cookieHeader = request.headers.get('Cookie');
     const cookie = await parseTheme(cookieHeader);

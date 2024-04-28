@@ -18,4 +18,4 @@ PORTAL_API_OPENID_AUTH_METHOD="client_secret_basic"
 AUTH_CALLBACK_URL="http://localhost:5173/login/callback"
 LOGOUT_CALLBACK_URL="http://localhost:5173/logout/callback"
 
-MONGODB_URL=mongodb://username:password@localhost:27017/admin?minPoolSize=1&maxPoolSize=2&authSource=admin
+MONGODB_URI=mongodb://username:password@localhost:27017/admin?minPoolSize=1&maxPoolSize=2&authSource=admin

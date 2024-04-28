@@ -32,7 +32,7 @@ export const getSessionRequestStorage = async (context: AppLoadContext) => {
             path: '/', // remember to add this so the cookie will work in all routes
             httpOnly: true, // for security reasons, make this cookie http only
             secrets: [context.cloudflare.env.SESSION_REQUEST_COOKIE_SECRET], // replace this with an actual secret
-            secure: process.env.NODE_ENV === 'production', // enable this in prod only
+            secure: context.cloudflare.env.NODE_ENV === 'production', // enable this in prod only
         },
     });
     return sessionRequestStorage;
@@ -50,7 +50,7 @@ export const getSessionStorage = async (context: AppLoadContext) => {
                 path: '/', // remember to add this so the cookie will work in all routes
                 httpOnly: true, // for security reasons, make this cookie http only
                 secrets: [context.cloudflare.env.SESSION_COOKIE_SECRET], // replace this with an actual secret
-                secure: process.env.NODE_ENV === 'production', // enable this in prod only
+                secure: context.cloudflare.env.NODE_ENV === 'production', // enable this in prod only
             },
         });
     return sessionStorage;
@@ -98,6 +98,26 @@ export const getPortalApiAuthClient = async (context: AppLoadContext) => {
             'client_secret_basic') as oidc.ClientAuthenticationMethod,
     };
     return portalApiAuthClient;
+};
+
+export const getAccessToken = async (
+    request: Request,
+    context: AppLoadContext,
+) => {
+    try {
+        const sessionStorage = await getSessionStorage(context);
+        if (sessionStorage == null) return null;
+
+        const cookieHeader = request.headers.get('Cookie');
+        if (!cookieHeader) return null;
+
+        const sessionData = await sessionStorage.getSession(cookieHeader);
+        if (sessionData.has('access_token') == false) return null;
+
+        return sessionData.get('access_token')!;
+    } catch (e) {
+        return null;
+    }
 };
 
 const code_challenge_method = 'S256';
@@ -318,8 +338,6 @@ export const processAuthResponse = async (
     request: Request,
     context: AppLoadContext,
 ) => {
-    if (await isAuthenticated(request, context)) return redirect('/');
-
     const sessionRequestStorage = await getSessionRequestStorage(context);
     if (sessionRequestStorage == null) return redirect('/');
 
@@ -387,7 +405,10 @@ export const processAuthResponse = async (
             apiClient,
             introspectionResponse,
         );
-        if (oidc.isOAuth2Error(introspectionResult)) {
+        if (
+            oidc.isOAuth2Error(introspectionResult) ||
+            introspectionResult.active == false
+        ) {
             throw new Error('failed to process introspection response');
         }
 
@@ -415,6 +436,7 @@ export const processAuthResponse = async (
             ),
         };
         await saveSessionInRedis(
+            context,
             context.cloudflare.env.OPENID_PROJECT_ID!,
             authorizationResult.access_token,
             userInfo,
@@ -492,8 +514,6 @@ export const processLogoutResponse = async (
     request: Request,
     context: AppLoadContext,
 ) => {
-    if (!(await isAuthenticated(request, context))) return redirect('/');
-
     const sessionStorage = await getSessionStorage(context);
     if (sessionStorage == null) return redirect('/');
 
@@ -597,18 +617,15 @@ export const getUserInfo = async (
 export const isAuthenticated = async (
     request: Request,
     context: AppLoadContext,
+    accessToken: string | null = null,
 ) => {
-    const sessionStorage = await getSessionStorage(context);
-    if (sessionStorage == null) return false;
+    if (accessToken == null) {
+        accessToken = await getAccessToken(request, context);
+    }
+    if (accessToken == null) return false;
 
-    const cookieHeader = request.headers.get('Cookie');
-    if (!cookieHeader) return false;
-
-    const sessionData = await sessionStorage.getSession(cookieHeader);
-    if (sessionData.has('access_token') == false) return false;
-
-    const accessToken = sessionData.get('access_token')!;
     const cachedSession = await getSessionFromRedis(
+        context,
         context.cloudflare.env.OPENID_PROJECT_ID!,
         accessToken,
     );
@@ -621,7 +638,7 @@ export const isAuthenticated = async (
     const introspectionResponse = await oidc.introspectionRequest(
         authServer,
         apiClient,
-        sessionData.get('access_token')!,
+        accessToken,
         {
             additionalParameters: {
                 token_hint_type: 'access_token',
@@ -641,6 +658,10 @@ export const isAuthenticated = async (
         return false;
     }
 
+    if (introspectionResult.active == false) {
+        return await refreshSession(request, context);
+    }
+
     const userInfo: IUserInfo = {
         version: UserInfoVersion,
         aud: introspectionResult.aud!,
@@ -657,6 +678,7 @@ export const isAuthenticated = async (
         ),
     };
     await saveSessionInRedis(
+        context,
         context.cloudflare.env.OPENID_PROJECT_ID!,
         accessToken,
         userInfo,
@@ -668,18 +690,15 @@ export const isAuthenticated = async (
 export const getPublicUserInfoFromSession = async (
     request: Request,
     context: AppLoadContext,
+    accessToken: string | null = null,
 ) => {
-    const sessionStorage = await getSessionStorage(context);
-    if (sessionStorage == null) return null;
+    if (accessToken == null) {
+        accessToken = await getAccessToken(request, context);
+    }
+    if (accessToken == null) return null;
 
-    const cookieHeader = request.headers.get('Cookie');
-    if (!cookieHeader) return null;
-
-    const sessionData = await sessionStorage.getSession(cookieHeader);
-    if (sessionData.has('access_token') == false) return null;
-
-    const accessToken = sessionData.get('access_token')!;
     const cachedSession = await getSessionFromRedis(
+        context,
         context.cloudflare.env.OPENID_PROJECT_ID!,
         accessToken,
     );
@@ -692,7 +711,7 @@ export const getPublicUserInfoFromSession = async (
     const introspectionResponse = await oidc.introspectionRequest(
         authServer,
         apiClient,
-        sessionData.get('access_token')!,
+        accessToken,
         {
             additionalParameters: {
                 token_hint_type: 'access_token',
@@ -708,11 +727,14 @@ export const getPublicUserInfoFromSession = async (
         apiClient,
         introspectionResponse,
     );
-    if (
-        oidc.isOAuth2Error(introspectionResult) ||
-        introspectionResult.active == false
-    ) {
+    if (oidc.isOAuth2Error(introspectionResult)) {
         return null;
+    }
+
+    if (introspectionResult.active == false) {
+        const response = await refreshSession(request, context);
+        if (response != null) return response;
+        return await clearSession(request, context);
     }
 
     const userInfo: IUserInfo = {
@@ -730,7 +752,17 @@ export const getPublicUserInfoFromSession = async (
             introspectionResult['urn:zitadel:iam:org:project:roles'] ?? {},
         ),
     };
+    if (
+        userInfo.expire_at != null &&
+        Date.now() * 0.001 >= userInfo.expire_at
+    ) {
+        const response = await refreshSession(request, context);
+        if (response != null) return response;
+        return await clearSession(request, context);
+    }
+
     await saveSessionInRedis(
+        context,
         context.cloudflare.env.OPENID_PROJECT_ID!,
         accessToken,
         userInfo,

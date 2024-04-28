@@ -16,5 +16,9 @@
     "dashboard.menu.close.label": "Close menu",
     "dashboard.menu.update.title": "Updates",
     "dashboard.menu.update.label": "Updates",
-    "dashboard.menu.update.list.label": "List"
+    "dashboard.menu.update.list.label": "List",
+    "dashboard.updates.title": "Updates Service",
+    "dashboard.updates.select-service.game": "Game",
+    "dashboard.updates.select-service.launcher": "Launcher",
+    "dashboard.updates.list.empty": "No versions found."
 }

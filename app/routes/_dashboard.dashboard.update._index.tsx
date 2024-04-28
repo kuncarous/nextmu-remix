@@ -8,6 +8,7 @@ import { hasDashboardRoles } from '~/utils/dashboard';
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
     const user = await getPublicUserInfoFromSession(request, context);
+    if (user != null && !('roles' in user)) return user;
     if (user == null) {
         return redirectToLogin(context, request);
     }

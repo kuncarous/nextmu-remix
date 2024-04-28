@@ -13,24 +13,18 @@ import reactHooksConfig from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 //import importConfig from 'eslint-plugin-import'; // TO DO : update package when fixed for flat config
 import stylistic from '@stylistic/eslint-plugin';
-import {
-    configs as ReactQueryConfigs,
-    rules as ReactQueryRules,
-} from '@tanstack/eslint-plugin-query';
 import gitignore from 'eslint-config-flat-gitignore';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import eslintTailwindCSS from 'eslint-plugin-tailwindcss';
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
     gitignore(),
     js.configs.recommended,
+    eslintTailwindCSS,
     {
         plugins: {
             '@stylistic': stylistic,
-            '@tanstack/eslint-plugin-query': {
-                rules: ReactQueryRules,
-                configs: ReactQueryConfigs,
-            },
             //import: importConfig,
         },
         languageOptions: {
@@ -45,11 +39,6 @@ export default [
                 ...globals.browser,
                 ...globals.commonjs,
             },
-        },
-        rules: {
-            '@tanstack/eslint-plugin-query/exhaustive-deps': 'error',
-            '@tanstack/eslint-plugin-query/no-rest-destructuring': 'warn',
-            '@tanstack/eslint-plugin-query/stable-query-client': 'error',
         },
     },
 

@@ -6,10 +6,13 @@
     "editor.formatOnSave": true,
     "files.autoSave": "afterDelay",
     "cssVariables.lookupFiles": [
-      "**/*.css",
-      "**/*.scss",
-      "**/*.sass",
-      "**/*.less",
-      "node_modules/@mantine/core/styles.css"
-    ]
+        "**/*.css",
+        "**/*.scss",
+        "**/*.sass",
+        "**/*.less",
+        "node_modules/@mantine/core/styles.css"
+    ],
+    "files.associations": {
+        "*.css": "tailwindcss"
+    }
 }

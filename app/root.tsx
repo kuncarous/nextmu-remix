@@ -21,7 +21,11 @@ import {
 } from '@remix-run/react';
 import i18next from '~/i18next.server';
 
-import type { LinksFunction, LoaderFunctionArgs } from '@remix-run/node';
+import type {
+    LinksFunction,
+    LoaderFunctionArgs,
+    MetaFunction,
+} from '@remix-run/node';
 import { useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ClientOnly } from 'remix-utils/client-only';
@@ -37,6 +41,14 @@ export const links: LinksFunction = () => [
     { rel: 'stylesheet', href: mantineStyles },
     { rel: 'stylesheet', href: nextMuStyles },
 ];
+
+export const meta: MetaFunction = () => {
+    const { t } = useTranslation();
+    return [
+        { title: t('title') },
+        { name: 'description', content: t('description') },
+    ];
+};
 
 export async function loader({ request }: LoaderFunctionArgs) {
     const user = await getPublicUserInfoFromSession(request);

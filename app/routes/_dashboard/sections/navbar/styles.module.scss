@@ -97,6 +97,7 @@
 
 @media (max-width: $mantine-breakpoint-md) {
     .navbar-wrapper {
+        z-index: 1;
         width: mrem(60px);
     }
 

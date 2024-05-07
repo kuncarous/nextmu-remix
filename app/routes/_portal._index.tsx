@@ -1,14 +1,4 @@
-import type { MetaFunction } from '@remix-run/node';
-import { useTranslation } from 'react-i18next';
 import { ErrorBoundary as ErrorBoundaryComponent } from '../errors';
-
-export const meta: MetaFunction = () => {
-    const { t } = useTranslation();
-    return [
-        { title: t('title') },
-        { name: 'description', content: t('description') },
-    ];
-};
 
 export default function Page() {
     return (

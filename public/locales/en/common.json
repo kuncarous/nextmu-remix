@@ -20,5 +20,10 @@
     "dashboard.updates.title": "Updates Service",
     "dashboard.updates.select-service.game": "Game",
     "dashboard.updates.select-service.launcher": "Launcher",
-    "dashboard.updates.list.empty": "No versions found."
+    "dashboard.updates.list.empty": "No versions found.",
+    "dashboard.updates.create.type.label": "Version Type",
+    "dashboard.updates.create.create.label": "Create",
+    "dashboard.updates.version-type.revision": "Revision",
+    "dashboard.updates.version-type.minor": "Minor",
+    "dashboard.updates.version-type.major": "Major"
 }

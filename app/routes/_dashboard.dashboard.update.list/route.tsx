@@ -70,7 +70,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
         accessToken,
     );
     if (error) {
-        throw new Response(null, parseGrpcErrorIntoResponse(error));
+        throw parseGrpcErrorIntoResponse(error);
     }
 
     return json(response);
@@ -118,7 +118,7 @@ export default function Page() {
                     />
                     <Link
                         className="flex justify-center items-center"
-                        to="/dashboard/update/create"
+                        to={`/dashboard/update/${mode}/create`}
                     >
                         <ActionIcon>
                             <IconPlus
@@ -129,7 +129,7 @@ export default function Page() {
                     </Link>
                 </Flex>
             </Flex>
-            <Divider className="my-[10px]" />
+            <Divider className="my-2.5" />
             <Flex className="grow" direction="row" gap={rem(8)}>
                 {(data?.versions.length ?? 0) === 0 && <EmptyVersionList />}
                 {data != null &&

@@ -13,8 +13,8 @@ export function Logo({ to }: ILogoProps) {
                 className={styles.logo}
                 src={
                     colorScheme === 'dark'
-                        ? '/images/nextmu_white_sm.png'
-                        : '/images/nextmu_black_sm.png'
+                        ? '/images/nextmu_white_sm.webp'
+                        : '/images/nextmu_black_sm.webp'
                 }
             />
         </Link>
@@ -29,8 +29,8 @@ export function LogoSide({ to }: ILogoProps) {
                 className={styles.logo}
                 src={
                     colorScheme === 'dark'
-                        ? '/images/nextmu_side_white.png'
-                        : '/images/nextmu_side_black.png'
+                        ? '/images/nextmu_side_white.webp'
+                        : '/images/nextmu_side_black.webp'
                 }
             />
         </Link>

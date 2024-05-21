@@ -1,6 +1,7 @@
 // Import styles of packages that you've installed.
 // All packages except `@mantine/hooks` require styles imports
 import mantineStyles from '@mantine/core/styles.css?url';
+import mantineTiptapStyles from '@mantine/tiptap/styles.css?url';
 import nextMuStyles from './styles/global.scss?url';
 import tailwindStylesheet from './styles/tailwind.css?url';
 
@@ -39,6 +40,7 @@ export const links: LinksFunction = () => [
     { rel: 'icon', href: '/favicon.png' },
     { rel: 'stylesheet', href: tailwindStylesheet },
     { rel: 'stylesheet', href: mantineStyles },
+    { rel: 'stylesheet', href: mantineTiptapStyles },
     { rel: 'stylesheet', href: nextMuStyles },
 ];
 

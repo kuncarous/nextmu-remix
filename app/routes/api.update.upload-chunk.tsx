@@ -1,7 +1,7 @@
 import { ActionFunctionArgs, json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import { ObjectId } from 'mongodb';
-import { serverOnly$ } from 'vite-env-only';
+import { serverOnly$ } from 'vite-env-only/macros';
 import { z } from 'zod';
 import { ZValidUpdateServiceMode, getUpdateService } from '~/consts/update';
 import {
@@ -78,5 +78,5 @@ export async function action({ request }: ActionFunctionArgs) {
         return parseGrpcErrorIntoJsonResponse(error);
     }
 
-    return json(response);
+    return response;
 }

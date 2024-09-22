@@ -214,3 +214,41 @@ export function resolve(base: string, relative: string) {
         return host + path + query + relativeObj.hash;
     }
 }
+
+export function appendBracketsToArrayKeys(obj: any): any {
+    const newObj: any = {};
+
+    for (const key in obj) {
+        if (Array.isArray(obj[key])) {
+            newObj[`${key}[]`] = obj[key];
+        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+            newObj[key] = appendBracketsToArrayKeys(obj[key]); // Recurse for nested objects
+        } else {
+            newObj[key] = obj[key];
+        }
+    }
+
+    return newObj;
+}
+
+export function fromEntriesWithArraySupport(
+    entries: IterableIterator<[string, string]>,
+): Record<string, string | string[]> {
+    const result: Record<string, string | string[]> = {};
+
+    for (const [key, value] of entries) {
+        const isArrayKey = key.endsWith('[]');
+        const cleanKey = isArrayKey ? key.slice(0, -2) : key; // Remove '[]' if present
+
+        if (isArrayKey) {
+            if (!result[cleanKey]) {
+                result[cleanKey] = []; // Initialize the array if it doesn't exist
+            }
+            if (Array.isArray(result[cleanKey])) result[cleanKey].push(value);
+        } else {
+            result[cleanKey] = value;
+        }
+    }
+
+    return result;
+}

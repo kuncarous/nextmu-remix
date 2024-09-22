@@ -9,7 +9,7 @@ import { useFetcher, useLoaderData } from '@remix-run/react';
 import { StatusCodes } from 'http-status-codes';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { serverOnly$ } from 'vite-env-only';
+import { serverOnly$ } from 'vite-env-only/macros';
 import { z } from 'zod';
 import { UpdateStepper, UpdateSteps } from '~/components/update-stepper';
 import { UpdateServices, getUpdateService } from '~/consts/update';
@@ -94,7 +94,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         throw parseGrpcErrorIntoResponse(error);
     }
 
-    return json(version);
+    return version;
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -163,7 +163,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         });
     }
 
-    return json(response);
+    return response;
 }
 
 function ClientOnlyPage() {

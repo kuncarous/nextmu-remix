@@ -1,14 +1,12 @@
 import {
     Alert,
-    Button,
-    Divider,
     Flex,
     Loader,
     Progress,
     UnstyledButton,
     rem,
 } from '@mantine/core';
-import { LoaderFunctionArgs, json } from '@remix-run/node';
+import { LoaderFunctionArgs, TypedResponse } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import {
     ChangeEvent,
@@ -19,7 +17,7 @@ import {
     useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { clientOnly$, serverOnly$ } from 'vite-env-only';
+import { clientOnly$, serverOnly$ } from 'vite-env-only/macros';
 import { UpdateStepper, UpdateSteps } from '~/components/update-stepper';
 import {
     ChunkSize,
@@ -34,30 +32,29 @@ import {
     getPublicUserInfoFromSession,
     redirectToLogin,
 } from '~/services/auth.server';
-import { fetchVersion } from '~/services/grpc/update.server';
+import { fetchUploads, fetchVersion } from '~/services/grpc/update.server';
 import { parseGrpcErrorIntoJsonResponse } from '~/utils/grpc.server';
 
 import { ClientOnly } from 'remix-utils/client-only';
 
-import { useParams } from '@remix-run/react';
+import { useLoaderData, useNavigate, useParams } from '@remix-run/react';
 import { IconAlertCircle, IconFileUpload } from '@tabler/icons-react';
 import { createSHA256 } from 'hash-wasm';
 import { ObjectId } from 'mongodb';
-import wretch from 'wretch';
-import AbortAddon from 'wretch/addons/abort';
-import { ChunkInfo__Output } from '~/proto/nextmu/v1/ChunkInfo';
+import { useTimeout } from 'usehooks-ts';
+import { FetchUploadsResponse__Output } from '~/proto/nextmu/v1/FetchUploadsResponse';
 import { StartUploadVersionResponse__Output } from '~/proto/nextmu/v1/StartUploadVersionResponse';
+import { UploadState } from '~/proto/nextmu/v1/UploadState';
 import { UploadVersionChunkResponse__Output } from '~/proto/nextmu/v1/UploadVersionChunkResponse';
 import { bytesToBase64 } from '~/utils/base64';
 import { formatSize } from '~/utils/format';
-import { IStartUploadVersion } from '../api.update.start-upload';
-import { IUploadVersionChunk } from '../api.update.upload-chunk';
+import { appendBracketsToArrayKeys } from '~/utils/url';
+import { IFetchUploads } from './api.update.fetch-uploads';
+import { IStartUploadVersion } from './api.update.start-upload';
+import { IUploadVersionChunk } from './api.update.upload-chunk';
+import { RequiredNonNullable } from '~/utils/types';
+import { apiClient } from '~/utils/fetch';
 
-const requestClient = clientOnly$(
-    wretch(`${window.location.protocol}//${window.location.host}`).addon(
-        AbortAddon(),
-    ),
-);
 const requiredRole = serverOnly$('update:edit');
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -99,23 +96,37 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         });
     }
 
-    const [error, version] = await fetchVersion(
-        versionId,
-        updateService,
-        accessToken,
-    );
-    if (error) {
-        return parseGrpcErrorIntoJsonResponse(error);
+    const version = await fetchVersion(versionId, updateService, accessToken);
+    if (version[0]) {
+        return parseGrpcErrorIntoJsonResponse(version[0]);
     }
 
-    return json(version);
+    const uploads = await fetchUploads([versionId], updateService, accessToken);
+    if (uploads[0]) {
+        return parseGrpcErrorIntoJsonResponse(uploads[0]);
+    }
+
+    return {
+        version: version[1].version,
+        upload: uploads[1].uploads?.[0],
+    };
 }
+type LoaderReturnType = Exclude<
+    Awaited<ReturnType<typeof loader>>,
+    TypedResponse
+>;
+type LoaderType = Promise<
+    Omit<LoaderReturnType, 'version'> &
+        RequiredNonNullable<Pick<LoaderReturnType, 'version'>>
+>;
 
 enum UploadVersionFileState {
+    VerifyState,
     ChooseFile,
     CalculateHash,
     StartUpload,
     UploadChunks,
+    ProcessingChunks,
     Finished,
 }
 
@@ -125,13 +136,45 @@ enum UploadVersionErrorState {
     MaximumFileSize,
 }
 
+function getUploadedChunks(
+    missingChunks: { start: number; end: number }[],
+    chunksCount: number,
+): number[] {
+    const uploadedChunks: number[] = [];
+    let currentChunk = 0;
+
+    // Ensure the missingChunks array is sorted by 'start'
+    missingChunks.sort((a, b) => a.start - b.start);
+
+    for (const { start, end } of missingChunks) {
+        // Add the range of uploaded chunks before the current missing chunk
+        while (currentChunk < start) {
+            uploadedChunks.push(currentChunk);
+            currentChunk++;
+        }
+
+        // Skip the missing chunk range
+        currentChunk = end + 1;
+    }
+
+    // Add any remaining uploaded chunks after the last missing chunk
+    while (currentChunk < chunksCount) {
+        uploadedChunks.push(currentChunk);
+        currentChunk++;
+    }
+
+    return uploadedChunks;
+}
+
 function ClientOnlyPage() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const { mode, versionId } = useParams();
+    const { upload } = useLoaderData<LoaderType>();
     const ref = useRef<HTMLInputElement>(null);
 
     const [state, setState] = useState<UploadVersionFileState>(
-        UploadVersionFileState.ChooseFile,
+        UploadVersionFileState.VerifyState,
     );
     const [error, setError] = useState<UploadVersionErrorState>(
         UploadVersionErrorState.None,
@@ -141,6 +184,7 @@ function ClientOnlyPage() {
     const [fileSize, setFileSize] = useState(0);
     const [fileHash, setFileHash] = useState('');
     const [processedSize, setProcessedSize] = useState(0);
+    const [fetchVersion, setFetchVersion] = useState(false);
     const progress = useMemo(
         () => (processedSize / fileSize) * 100,
         [fileSize, processedSize],
@@ -148,14 +192,13 @@ function ClientOnlyPage() {
 
     const [uploadId, setUploadId] = useState<string | null>(null);
     const [concurrentId, setConcurrentId] = useState<string | null>(null);
-    const [uploadedChunks, setUploadedChunks] = useState<ChunkInfo__Output[]>(
-        [],
-    );
+    const [uploadedChunks, setUploadedChunks] = useState<number[]>([]);
 
     const onStartUploadVersion = useCallback(
         async (hash: string, fileSize: number, controller: AbortController) => {
             try {
-                const response = await requestClient!
+                const chunksCount = Math.ceil(fileSize / ChunkSize);
+                const response = await apiClient!
                     .signal(controller)
                     .post(
                         {
@@ -172,14 +215,17 @@ function ClientOnlyPage() {
 
                 setUploadId(response.uploadId);
                 setConcurrentId(response.concurrentId);
-                setProcessedSize(
-                    response.existingChunks.reduce((p, c) => p + c.size, 0),
-                );
+                const processedSize =
+                    chunksCount * ChunkSize -
+                    response.missingRanges.reduce((value, current) => {
+                        return (
+                            value +
+                            (current.end - current.start + 1) * ChunkSize
+                        );
+                    }, 0);
+                setProcessedSize(processedSize);
                 setUploadedChunks(
-                    response.existingChunks.map((c) => ({
-                        offset: c.offset * ChunkSize,
-                        size: c.size * ChunkSize,
-                    })),
+                    getUploadedChunks(response.missingRanges, chunksCount),
                 );
                 setState(UploadVersionFileState.UploadChunks);
             } catch (error) {
@@ -197,7 +243,7 @@ function ClientOnlyPage() {
             data: Uint8Array,
             controller: AbortController,
         ) => {
-            const response = await requestClient!
+            const response = await apiClient!
                 .signal(controller)
                 .post(
                     {
@@ -211,6 +257,8 @@ function ClientOnlyPage() {
                 )
                 .json<UploadVersionChunkResponse__Output>();
             setProcessedSize((processedSize) => (processedSize += ChunkSize));
+
+            return response.finished;
         },
         [],
     );
@@ -268,7 +316,8 @@ function ClientOnlyPage() {
             }
 
             const chunks: IChunk[] = [];
-            const promises: Promise<void>[] = [];
+            const promises: Promise<boolean>[] = [];
+            let isFinished = false;
 
             const uploadChunks = async () => {
                 if (chunks.length === 0) return;
@@ -280,16 +329,11 @@ function ClientOnlyPage() {
                     ++index
                 ) {
                     const chunk = chunks[index];
+                    const chunkOffset = chunk.offset / ChunkSize;
                     if (
-                        uploadedChunks.find(
-                            (c) =>
-                                c.offset <= chunk.offset &&
-                                c.offset + c.size >= chunk.offset,
-                        ) != null
+                        uploadedChunks.findIndex((c) => c === chunkOffset) !==
+                        -1
                     ) {
-                        setProcessedSize(
-                            (processedSize) => (processedSize += ChunkSize),
-                        );
                         continue;
                     }
 
@@ -301,7 +345,10 @@ function ClientOnlyPage() {
                         controller,
                     );
                     promise.then(
-                        () => promises.splice(promises.indexOf(promise), 1),
+                        (finished) => {
+                            promises.splice(promises.indexOf(promise), 1);
+                            isFinished = finished;
+                        },
                         () => promises.splice(promises.indexOf(promise), 1),
                     );
                     promises.push(promise);
@@ -369,6 +416,9 @@ function ClientOnlyPage() {
                     await uploadChunks();
                 }
                 if (promises.length > 0) await Promise.all([...promises]);
+
+                if (isFinished)
+                    setState(UploadVersionFileState.ProcessingChunks);
             } catch (e) {
                 setState(UploadVersionFileState.ChooseFile);
             }
@@ -376,8 +426,62 @@ function ClientOnlyPage() {
         [uploadId, concurrentId],
     );
 
+    const onProcessingChunks = useCallback(async () => {
+        try {
+            const response = await apiClient!
+                .query(
+                    appendBracketsToArrayKeys({
+                        mode,
+                        versionIds: [versionId],
+                    } as IFetchUploads),
+                )
+                .get('/api/update/fetch-uploads')
+                .json<FetchUploadsResponse__Output>();
+
+            const upload = response.uploads?.find(
+                (u) => u.versionId === versionId,
+            );
+            if (upload == null) {
+                /*
+                 * We should show an error saying something happened and add a button to reload the page.
+                 */
+                return;
+            }
+
+            if (upload.state === UploadState.READY) {
+                /*
+                 * Finished processing the upload, now we are ready to show the version page where we allow to publish the version.
+                 * Just a simple page showing information related to the Version and also allow to replace the update if wanted.
+                 * We should allow to download the current version zip so if they want to verify it before publish, they would be able to.
+                 */
+                setState(UploadVersionFileState.Finished);
+            } else {
+                setFetchVersion(true);
+            }
+        } catch (error) {}
+    }, [uploadId, concurrentId]);
+
+    useTimeout(onProcessingChunks, fetchVersion === true ? 1000 : null);
+
     useEffect(() => {
         switch (state) {
+            case UploadVersionFileState.VerifyState:
+                {
+                    if (upload == null)
+                        setState(UploadVersionFileState.ChooseFile);
+                    else if (
+                        (
+                            [
+                                UploadState.NONE,
+                                UploadState.PENDING,
+                            ] as UploadState[]
+                        ).includes(upload.state ?? UploadState.NONE)
+                    )
+                        setState(UploadVersionFileState.ChooseFile);
+                    else setState(UploadVersionFileState.ProcessingChunks);
+                }
+                break;
+
             case UploadVersionFileState.CalculateHash: {
                 if (file == null) return;
 
@@ -421,6 +525,20 @@ function ClientOnlyPage() {
                     controller.abort();
                 };
             }
+
+            case UploadVersionFileState.ProcessingChunks:
+                {
+                    setFetchVersion(true);
+                }
+                break;
+
+            case UploadVersionFileState.Finished:
+                {
+                    navigate(`/dashboard/update/${mode}/publish/${versionId}`, {
+                        replace: true,
+                    });
+                }
+                break;
         }
     }, [state]);
 
@@ -464,6 +582,15 @@ function ClientOnlyPage() {
                                     { size: formatSize(MaximumFileSize) },
                                 )}
                             </Alert>
+                        )}
+                        {state == UploadVersionFileState.VerifyState && (
+                            <>
+                                <span className="text-center">
+                                    {t(
+                                        'dashboard.updates.upload.verify-state.text',
+                                    )}
+                                </span>
+                            </>
                         )}
                         {state == UploadVersionFileState.ChooseFile && (
                             <>
@@ -516,15 +643,25 @@ function ClientOnlyPage() {
                                 <Progress value={progress} />
                             </>
                         )}
+                        {state == UploadVersionFileState.ProcessingChunks && (
+                            <>
+                                <span className="text-center">
+                                    {t(
+                                        'dashboard.updates.upload.processing-chunks.text',
+                                    )}
+                                </span>
+                            </>
+                        )}
+                        {state == UploadVersionFileState.Finished && (
+                            <>
+                                <span className="text-center">
+                                    {t(
+                                        'dashboard.updates.upload.finished.text',
+                                    )}
+                                </span>
+                            </>
+                        )}
                     </Flex>
-                    <Divider className="my-2" />
-                    <Button
-                        className="self-end"
-                        type="submit"
-                        disabled={state !== UploadVersionFileState.Finished}
-                    >
-                        {t('dashboard.updates.upload.next.label')}
-                    </Button>
                 </Flex>
             </Flex>
         </Flex>

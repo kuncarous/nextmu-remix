@@ -1,4 +1,4 @@
-import { serverOnly$ } from 'vite-env-only';
+import { serverOnly$ } from 'vite-env-only/macros';
 import {
     getGameUpdateService,
     getLauncherUpdateService,

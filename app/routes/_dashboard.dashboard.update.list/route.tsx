@@ -6,13 +6,13 @@ import {
     Title,
     rem,
 } from '@mantine/core';
-import { LoaderFunctionArgs, json } from '@remix-run/node';
+import { LoaderFunctionArgs, TypedResponse } from '@remix-run/node';
 import { Link, useLoaderData, useSearchParams } from '@remix-run/react';
 import { IconPlus } from '@tabler/icons-react';
 import { StatusCodes } from 'http-status-codes';
 import { ChangeEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { serverOnly$ } from 'vite-env-only';
+import { serverOnly$ } from 'vite-env-only/macros';
 import { z } from 'zod';
 import { DefaultMode, UpdateServices, getUpdateService } from '~/consts/update';
 import {
@@ -20,8 +20,9 @@ import {
     getPublicUserInfoFromSession,
     redirectToLogin,
 } from '~/services/auth.server';
-import { getVersionsList } from '~/services/grpc/update.server';
+import { fetchUploads, getVersionsList } from '~/services/grpc/update.server';
 import { parseGrpcErrorIntoResponse } from '~/utils/grpc.server';
+import { RequiredNonNullable } from '~/utils/types';
 import { EmptyVersionList } from './components/empty-version-list';
 import { VersionCard } from './components/version-card';
 
@@ -63,23 +64,44 @@ export async function loader({ request }: LoaderFunctionArgs) {
         });
     }
 
-    const [error, response] = await getVersionsList(
+    const versions = await getVersionsList(
         parsed.data.page,
         parsed.data.size,
         await getUpdateService!(mode),
         accessToken,
     );
-    if (error) {
-        throw parseGrpcErrorIntoResponse(error);
+    if (versions[0]) {
+        throw parseGrpcErrorIntoResponse(versions[0]);
     }
 
-    return json(response);
+    const uploads = await fetchUploads(
+        versions[1].versions.map(v => v.id),
+        await getUpdateService!(mode),
+        accessToken,
+    );
+    if (uploads[0]) {
+        throw parseGrpcErrorIntoResponse(uploads[0]);
+    }
+
+    return {
+        ...versions[1],
+        ...uploads[1],
+    };
 }
+type LoaderReturnType = Exclude<
+    Awaited<ReturnType<typeof loader>>,
+    TypedResponse
+>;
+type LoaderType = Promise<
+    Omit<LoaderReturnType, 'version'> &
+        RequiredNonNullable<Pick<LoaderReturnType, 'versions'>>
+>;
 
 export default function Page() {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
-    const data = useLoaderData<typeof loader>();
+    const data = useLoaderData<LoaderType>();
+    const uploads = useMemo(() => new Map((data.uploads ?? []).map(u => [u.versionId!, u])), [data.uploads ?? []]);
 
     const onModeSelect = useCallback(
         (event: ChangeEvent<HTMLSelectElement>) => {
@@ -134,7 +156,7 @@ export default function Page() {
                 {(data?.versions.length ?? 0) === 0 && <EmptyVersionList />}
                 {data != null &&
                     data.versions.map((version) => (
-                        <VersionCard key={version.id} version={version} />
+                        <VersionCard key={version.id} version={version} upload={uploads.get(version.id)} />
                     ))}
             </Flex>
         </Flex>

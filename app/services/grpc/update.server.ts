@@ -1,13 +1,16 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
-import { Empty__Output } from '~/proto/google/protobuf/Empty';
+import { Empty, Empty__Output } from '~/proto/google/protobuf/Empty';
 import type { CreateVersionRequest } from '~/proto/nextmu/v1/CreateVersionRequest';
 import type { CreateVersionResponse__Output as CreateVersionResponse } from '~/proto/nextmu/v1/CreateVersionResponse';
 import type { EditVersionRequest } from '~/proto/nextmu/v1/EditVersionRequest';
+import { FetchUploadsRequest } from '~/proto/nextmu/v1/FetchUploadsRequest';
+import { FetchUploadsResponse } from '~/proto/nextmu/v1/FetchUploadsResponse';
 import type { FetchVersionRequest } from '~/proto/nextmu/v1/FetchVersionRequest';
 import type { FetchVersionResponse__Output as FetchVersionResponse } from '~/proto/nextmu/v1/FetchVersionResponse';
 import type { ListVersionsRequest } from '~/proto/nextmu/v1/ListVersionsRequest';
 import type { ListVersionsResponse__Output as ListVersionsResponse } from '~/proto/nextmu/v1/ListVersionsResponse';
+import { ProcessVersionRequest } from '~/proto/nextmu/v1/ProcessVersionRequest';
 import { StartUploadVersionRequest } from '~/proto/nextmu/v1/StartUploadVersionRequest';
 import { StartUploadVersionResponse__Output as StartUploadVersionResponse } from '~/proto/nextmu/v1/StartUploadVersionResponse';
 import type { UpdateServiceClient } from '~/proto/nextmu/v1/UpdateService';
@@ -125,6 +128,36 @@ export const fetchVersion = async (
         FetchVersionRequest,
         FetchVersionResponse
     >(client.fetchVersion.bind(client), request, metadata);
+
+    return response;
+};
+
+export const fetchUploads = async (
+    ids: string[],
+    client: UpdateServiceClient | null,
+    accessToken: string,
+) => {
+    if (client == null) {
+        return [
+            {
+                code: grpc.status.UNAVAILABLE,
+                details: 'service is unavailable, try again later',
+            } as grpc.ServiceError,
+            undefined,
+        ] as TRpcError;
+    }
+
+    const request: FetchUploadsRequest = {
+        ids,
+    };
+
+    const metadata = new grpc.Metadata();
+    metadata.set('authorization', `Bearer ${accessToken}`);
+
+    const response = await promisifyRpc<
+        FetchUploadsRequest,
+        FetchUploadsResponse
+    >(client.fetchUploads.bind(client), request, metadata);
 
     return response;
 };
@@ -264,6 +297,37 @@ export const uploadVersionChunk = async (
         UploadVersionChunkRequest,
         UploadVersionChunkResponse
     >(client.uploadVersionChunk.bind(client), request, metadata);
+
+    return response;
+};
+
+export const publishVersion = async (
+    versionId: string,
+    client: UpdateServiceClient | null,
+    accessToken: string,
+) => {
+    if (client == null) {
+        return [
+            {
+                code: grpc.status.UNAVAILABLE,
+                details: 'service is unavailable, try again later',
+            } as grpc.ServiceError,
+            undefined,
+        ] as TRpcError;
+    }
+
+    const request: ProcessVersionRequest = {
+        id: versionId,
+    };
+
+    const metadata = new grpc.Metadata();
+    metadata.set('authorization', `Bearer ${accessToken}`);
+
+    const response = await promisifyRpc<ProcessVersionRequest, Empty>(
+        client.processVersion.bind(client),
+        request,
+        metadata,
+    );
 
     return response;
 };

@@ -17,7 +17,7 @@ import { useFetcher } from '@remix-run/react';
 import { StatusCodes } from 'http-status-codes';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { serverOnly$ } from 'vite-env-only';
+import { serverOnly$ } from 'vite-env-only/macros';
 import { z } from 'zod';
 import { UpdateStepper, UpdateSteps } from '~/components/update-stepper';
 import { UpdateServices, getUpdateService } from '~/consts/update';
@@ -78,7 +78,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         });
     }
 
-    return json({});
+    return {};
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {

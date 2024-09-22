@@ -1,6 +1,6 @@
 import {
-    AppLoadContext,
     SessionStorage,
+    TypedResponse,
     createCookieSessionStorage,
     redirect,
 } from '@remix-run/node';
@@ -98,9 +98,7 @@ export const getPortalApiAuthClient = async () => {
     return portalApiAuthClient;
 };
 
-export const getAccessToken = async (
-    request: Request,
-) => {
+export const getAccessToken = async (request: Request) => {
     try {
         const sessionStorage = await getSessionStorage();
         if (sessionStorage == null) return null;
@@ -120,13 +118,13 @@ export const getAccessToken = async (
 const code_challenge_method = 'S256';
 export const redirectToLogin = async (
     req?: Request,
-) => {
+): Promise<TypedResponse> => {
     try {
         const sessionRequestStorage = await getSessionRequestStorage();
-        if (sessionRequestStorage == null) return null;
+        if (sessionRequestStorage == null) return redirect('/');
 
         const authServer = await getAuthorizationServer();
-        if (authServer == null) return null;
+        if (authServer == null) return redirect('/');
 
         const code_verifier = oidc.generateRandomCodeVerifier();
         const code_challenge =
@@ -184,19 +182,20 @@ export const redirectToLogin = async (
             headers: { 'Set-Cookie': cookie },
         });
     } catch (error) {
-        return null;
+        console.error(`[ERROR] redirectToLogin failed : ${error}`);
+        return redirect('/');
     }
 };
 
 export const redirectToRegister = async (
     req?: Request,
-) => {
+): Promise<TypedResponse> => {
     try {
         const sessionRequestStorage = await getSessionRequestStorage();
-        if (sessionRequestStorage == null) return null;
+        if (sessionRequestStorage == null) return redirect('/');
 
         const authServer = await getAuthorizationServer();
-        if (authServer == null) return null;
+        if (authServer == null) return redirect('/');
 
         const code_verifier = oidc.generateRandomCodeVerifier();
         const code_challenge =
@@ -254,19 +253,20 @@ export const redirectToRegister = async (
             headers: { 'Set-Cookie': cookie },
         });
     } catch (error) {
-        return null;
+        console.error(`[ERROR] redirectToRegister failed : ${error}`);
+        return redirect('/');
     }
 };
 
 export const redirectToSwitch = async (
     req?: Request,
-) => {
+): Promise<TypedResponse> => {
     try {
         const sessionRequestStorage = await getSessionRequestStorage();
-        if (sessionRequestStorage == null) return null;
+        if (sessionRequestStorage == null) return redirect('/');
 
         const authServer = await getAuthorizationServer();
-        if (authServer == null) return null;
+        if (authServer == null) return redirect('/');
 
         const code_verifier = oidc.generateRandomCodeVerifier();
         const code_challenge =
@@ -324,13 +324,12 @@ export const redirectToSwitch = async (
             headers: { 'Set-Cookie': cookie },
         });
     } catch (error) {
-        return null;
+        console.error(`[ERROR] redirectToSwitch failed : ${error}`);
+        return redirect('/');
     }
 };
 
-export const processAuthResponse = async (
-    request: Request,
-) => {
+export const processAuthResponse = async (request: Request) => {
     const sessionRequestStorage = await getSessionRequestStorage();
     if (sessionRequestStorage == null) return redirect('/');
 
@@ -460,9 +459,7 @@ export const processAuthResponse = async (
     }
 };
 
-export const redirectToLogout = async (
-    request: Request,
-) => {
+export const redirectToLogout = async (request: Request) => {
     try {
         const sessionStorage = await getSessionStorage();
         if (sessionStorage == null) return null;
@@ -497,9 +494,7 @@ export const redirectToLogout = async (
     }
 };
 
-export const processLogoutResponse = async (
-    request: Request,
-) => {
+export const processLogoutResponse = async (request: Request) => {
     const sessionStorage = await getSessionStorage();
     if (sessionStorage == null) return redirect('/');
 
@@ -510,9 +505,7 @@ export const processLogoutResponse = async (
     return redirect('/', { headers: { 'Set-Cookie': cookie } });
 };
 
-export const refreshSession = async (
-    request: Request,
-) => {
+export const refreshSession = async (request: Request) => {
     const authServer = await getAuthorizationServer();
     if (authServer == null) return null;
 
@@ -551,9 +544,7 @@ export const refreshSession = async (
     return redirect(request.url, { headers: { 'Set-Cookie': cookie } });
 };
 
-export const clearSession = async (
-    request: Request,
-) => {
+export const clearSession = async (request: Request) => {
     const authServer = await getAuthorizationServer();
     if (authServer == null) return null;
 
@@ -578,9 +569,10 @@ export const getUserInfo = async (
         const authServer = await getAuthorizationServer();
         if (authServer == null) return null;
 
+        const portalClient = await getPortalAuthClient();
         const response = await oidc.userInfoRequest(
             authServer,
-            await getPortalAuthClient(),
+            portalClient,
             accessToken,
             options,
         );
@@ -588,8 +580,10 @@ export const getUserInfo = async (
             return null;
         }
 
-        return await oidc.processDiscoveryResponse(
-            new URL(process.env.PORTAL_OPENID_ISSUER_URL!),
+        return await oidc.processUserInfoResponse(
+            authServer,
+            portalClient,
+            oidc.skipSubjectCheck,
             response,
         );
     } catch (error) {

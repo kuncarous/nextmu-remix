@@ -1,39 +1,26 @@
-import { ActionFunctionArgs, json } from '@remix-run/node';
+import { LoaderFunctionArgs, json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import { ObjectId } from 'mongodb';
 import { serverOnly$ } from 'vite-env-only/macros';
 import { z } from 'zod';
-import {
-    MaximumFileSize,
-    MinimumFileSize,
-    ZValidUpdateServiceMode,
-    getUpdateService,
-} from '~/consts/update';
+import { ZValidUpdateServiceMode, getUpdateService } from '~/consts/update';
 import {
     getAccessToken,
     getPublicUserInfoFromSession,
     redirectToLogin,
 } from '~/services/auth.server';
-import { startUploadVersion } from '~/services/grpc/update.server';
+import { fetchVersion } from '~/services/grpc/update.server';
 import { parseGrpcErrorIntoJsonResponse } from '~/utils/grpc.server';
 
 const requiredRole = serverOnly$('update:edit');
 
-export const ZStartUploadVersion = z.object({
+export const ZFetchVersion = z.object({
     mode: ZValidUpdateServiceMode,
     versionId: z.string().refine((value) => ObjectId.isValid(value)),
-    hash: z.string().length(64),
-    type: z.literal('application/zip'),
-    chunkSize: z.coerce
-        .number()
-        .multipleOf(2)
-        .min(16 * 1024)
-        .max(512 * 1024),
-    fileSize: z.coerce.number().min(MinimumFileSize).max(MaximumFileSize),
 });
-export type IStartUploadVersion = z.infer<typeof ZStartUploadVersion>;
+export type IFetchVersion = z.infer<typeof ZFetchVersion>;
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function loader({ request, params }: LoaderFunctionArgs) {
     const accessToken = await getAccessToken(request);
     if (accessToken == null) {
         return redirectToLogin(request);
@@ -51,7 +38,10 @@ export async function action({ request }: ActionFunctionArgs) {
         });
     }
 
-    const parsed = ZStartUploadVersion.safeParse(await request.json());
+    const url = new URL(request.url);
+    const parsed = ZFetchVersion.safeParse(
+        Object.fromEntries(url.searchParams.entries()),
+    );
     if (parsed.success === false) {
         return json(
             {
@@ -69,13 +59,9 @@ export async function action({ request }: ActionFunctionArgs) {
         });
     }
 
-    const [error, response] = await startUploadVersion(
+    const [error, response] = await fetchVersion(
         parsed.data.versionId,
-        parsed.data.hash,
-        parsed.data.type,
-        parsed.data.chunkSize,
-        parsed.data.fileSize,
-        await getUpdateService!(parsed.data.mode),
+        updateService,
         accessToken,
     );
     if (error) {

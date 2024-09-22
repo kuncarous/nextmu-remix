@@ -17,7 +17,6 @@ import {
     Outlet,
     Scripts,
     ScrollRestoration,
-    json,
     useLoaderData,
 } from '@remix-run/react';
 import i18next from '~/i18next.server';
@@ -59,7 +58,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     const cookieHeader = request.headers.get('Cookie');
     const cookie = await parseTheme(cookieHeader);
     const locale = await i18next.getLocale(request);
-    return json({ locale, theme: cookie.mode, user });
+    return { locale, theme: cookie.mode, user };
 }
 
 export const handle = {

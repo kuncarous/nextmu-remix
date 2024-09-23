@@ -17,7 +17,7 @@ import {
     useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { clientOnly$, serverOnly$ } from 'vite-env-only/macros';
+import { serverOnly$ } from 'vite-env-only/macros';
 import { UpdateStepper, UpdateSteps } from '~/components/update-stepper';
 import {
     ChunkSize,
@@ -39,21 +39,21 @@ import { ClientOnly } from 'remix-utils/client-only';
 
 import { useLoaderData, useNavigate, useParams } from '@remix-run/react';
 import { IconAlertCircle, IconFileUpload } from '@tabler/icons-react';
+import { ObjectId } from 'bson';
 import { createSHA256 } from 'hash-wasm';
-import { ObjectId } from 'mongodb';
 import { useTimeout } from 'usehooks-ts';
 import { FetchUploadsResponse__Output } from '~/proto/nextmu/v1/FetchUploadsResponse';
 import { StartUploadVersionResponse__Output } from '~/proto/nextmu/v1/StartUploadVersionResponse';
 import { UploadState } from '~/proto/nextmu/v1/UploadState';
 import { UploadVersionChunkResponse__Output } from '~/proto/nextmu/v1/UploadVersionChunkResponse';
 import { bytesToBase64 } from '~/utils/base64';
+import { apiClient } from '~/utils/fetch';
 import { formatSize } from '~/utils/format';
+import { RequiredNonNullable } from '~/utils/types';
 import { appendBracketsToArrayKeys } from '~/utils/url';
 import { IFetchUploads } from './api.update.fetch-uploads';
 import { IStartUploadVersion } from './api.update.start-upload';
 import { IUploadVersionChunk } from './api.update.upload-chunk';
-import { RequiredNonNullable } from '~/utils/types';
-import { apiClient } from '~/utils/fetch';
 
 const requiredRole = serverOnly$('update:edit');
 

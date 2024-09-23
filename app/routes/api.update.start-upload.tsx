@@ -1,6 +1,6 @@
 import { ActionFunctionArgs, json } from '@remix-run/node';
+import { ObjectId } from 'bson';
 import { StatusCodes } from 'http-status-codes';
-import { ObjectId } from 'mongodb';
 import { serverOnly$ } from 'vite-env-only/macros';
 import { z } from 'zod';
 import {
@@ -75,7 +75,7 @@ export async function action({ request }: ActionFunctionArgs) {
         parsed.data.type,
         parsed.data.chunkSize,
         parsed.data.fileSize,
-        await getUpdateService!(parsed.data.mode),
+        updateService,
         accessToken,
     );
     if (error) {

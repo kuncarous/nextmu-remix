@@ -3,6 +3,7 @@ import {
     ActionFunctionArgs,
     LinksFunction,
     LoaderFunctionArgs,
+    TypedResponse,
     json,
 } from '@remix-run/node';
 import { useFetcher, useLoaderData } from '@remix-run/react';
@@ -35,7 +36,8 @@ import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { ObjectId } from 'mongodb';
+import { ObjectId } from 'bson';
+import { RequiredNonNullable } from '~/utils/types';
 
 const requiredRole = serverOnly$('update:edit');
 const ZEditVersion = z.object({
@@ -96,6 +98,14 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
     return version;
 }
+type LoaderReturnType = Exclude<
+    Awaited<ReturnType<typeof loader>>,
+    TypedResponse
+>;
+type LoaderType = Promise<
+    Omit<LoaderReturnType, 'version'> &
+        RequiredNonNullable<Pick<LoaderReturnType, 'version'>>
+>;
 
 export async function action({ request, params }: ActionFunctionArgs) {
     const { mode, versionId } = params;
@@ -168,7 +178,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 function ClientOnlyPage() {
     const { t } = useTranslation();
-    const data = useLoaderData<typeof loader>();
+    const data = useLoaderData<LoaderType>();
     const fetcher = useFetcher<typeof action>();
 
     const editor = useEditor({

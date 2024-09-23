@@ -6,22 +6,41 @@ import {
     Title,
     rem,
 } from '@mantine/core';
-import { LoaderFunctionArgs, TypedResponse } from '@remix-run/node';
+import {
+    ActionFunctionArgs,
+    LoaderFunctionArgs,
+    TypedResponse,
+    json,
+} from '@remix-run/node';
 import { Link, useLoaderData, useSearchParams } from '@remix-run/react';
 import { IconPlus } from '@tabler/icons-react';
+import { ObjectId } from 'bson';
 import { StatusCodes } from 'http-status-codes';
 import { ChangeEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { serverOnly$ } from 'vite-env-only/macros';
 import { z } from 'zod';
-import { DefaultMode, UpdateServices, getUpdateService } from '~/consts/update';
+import {
+    DefaultMode,
+    UpdateAction,
+    UpdateServices,
+    ZUpdateAction,
+    getUpdateService,
+} from '~/consts/update';
 import {
     getAccessToken,
     getPublicUserInfoFromSession,
     redirectToLogin,
 } from '~/services/auth.server';
-import { fetchUploads, getVersionsList } from '~/services/grpc/update.server';
-import { parseGrpcErrorIntoResponse } from '~/utils/grpc.server';
+import {
+    fetchUploads,
+    getVersionsList,
+    publishVersion,
+} from '~/services/grpc/update.server';
+import {
+    parseGrpcErrorIntoJsonResponse,
+    parseGrpcErrorIntoResponse,
+} from '~/utils/grpc.server';
 import { RequiredNonNullable } from '~/utils/types';
 import { EmptyVersionList } from './components/empty-version-list';
 import { VersionCard } from './components/version-card';
@@ -75,7 +94,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
 
     const uploads = await fetchUploads(
-        versions[1].versions.map(v => v.id),
+        versions[1].versions.map((v) => v.id),
         await getUpdateService!(mode),
         accessToken,
     );
@@ -101,7 +120,10 @@ export default function Page() {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
     const data = useLoaderData<LoaderType>();
-    const uploads = useMemo(() => new Map((data.uploads ?? []).map(u => [u.versionId!, u])), [data.uploads ?? []]);
+    const uploads = useMemo(
+        () => new Map((data.uploads ?? []).map((u) => [u.versionId!, u])),
+        [data.uploads ?? []],
+    );
 
     const onModeSelect = useCallback(
         (event: ChangeEvent<HTMLSelectElement>) => {
@@ -156,9 +178,78 @@ export default function Page() {
                 {(data?.versions.length ?? 0) === 0 && <EmptyVersionList />}
                 {data != null &&
                     data.versions.map((version) => (
-                        <VersionCard key={version.id} version={version} upload={uploads.get(version.id)} />
+                        <VersionCard
+                            key={version.id}
+                            version={version}
+                            upload={uploads.get(version.id)}
+                        />
                     ))}
             </Flex>
         </Flex>
     );
+}
+
+export const ZPublishVersion = z.object({
+    action: ZUpdateAction,
+    versionId: z.string().refine((value) => ObjectId.isValid(value)),
+});
+export type IPublishVersion = z.infer<typeof ZPublishVersion>;
+
+export async function action({ request }: ActionFunctionArgs) {
+    const accessToken = await getAccessToken(request);
+    if (accessToken == null) {
+        return redirectToLogin(request);
+    }
+
+    const user = await getPublicUserInfoFromSession(request);
+    if (user != null && !('roles' in user)) return user;
+    if (user == null) {
+        return redirectToLogin(request);
+    }
+    if (user.roles.includes(requiredRole!) === false) {
+        throw new Response(null, {
+            status: StatusCodes.UNAUTHORIZED,
+            statusText: 'Unauthorized',
+        });
+    }
+
+    const parsed = ZPublishVersion.safeParse(await request.json());
+    if (parsed.success === false) {
+        return json(
+            {
+                error: parsed.error.format(),
+            },
+            StatusCodes.BAD_REQUEST,
+        );
+    }
+
+    if (parsed.data.action !== UpdateAction.Publish) {
+        return json(
+            {
+                error: `invalid action`,
+            },
+            StatusCodes.BAD_REQUEST,
+        );
+    }
+
+    const url = new URL(request.url);
+    const mode = url.searchParams.get('mode') || DefaultMode;
+    const updateService = await getUpdateService!(mode);
+    if (updateService == null) {
+        throw new Response(null, {
+            status: StatusCodes.SERVICE_UNAVAILABLE,
+            statusText: 'Service Unavailable',
+        });
+    }
+
+    const [error, response] = await publishVersion(
+        parsed.data.versionId,
+        updateService,
+        accessToken,
+    );
+    if (error) {
+        return parseGrpcErrorIntoJsonResponse(error);
+    }
+
+    return response;
 }

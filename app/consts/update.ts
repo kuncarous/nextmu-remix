@@ -1,4 +1,5 @@
 import { serverOnly$ } from 'vite-env-only/macros';
+import { z } from 'zod';
 import {
     getGameUpdateService,
     getLauncherUpdateService,
@@ -24,6 +25,11 @@ export const UpdateServices: IUpdateService[] = [
 export const ZValidUpdateServiceMode = constructZodLiteralUnionType(
     UpdateServices.map((v) => v.value),
 );
+
+export enum UpdateAction {
+    Publish = 'publish',
+}
+export const ZUpdateAction = z.nativeEnum(UpdateAction);
 
 export const getUpdateService = serverOnly$(async (mode: string) => {
     if (mode === 'launcher') return await getLauncherUpdateService();

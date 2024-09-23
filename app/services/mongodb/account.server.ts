@@ -1,4 +1,4 @@
-import { ObjectId } from 'mongodb';
+import { ObjectId } from 'bson';
 import type { IntrospectionResponse } from 'oauth4webapi';
 import { getMongoClient } from './client.server';
 
@@ -8,9 +8,7 @@ interface IAccount {
     createdAt: Date;
 }
 
-export const createOrFindAccount = async (
-    session: IntrospectionResponse,
-) => {
+export const createOrFindAccount = async (session: IntrospectionResponse) => {
     try {
         const mongoClient = await getMongoClient();
         const collection = mongoClient
@@ -54,9 +52,7 @@ export const createOrFindAccount = async (
     }
 };
 
-export const findAccount = async (
-    accountId: ObjectId,
-) => {
+export const findAccount = async (accountId: ObjectId) => {
     try {
         const mongoClient = await getMongoClient();
         const collection = mongoClient
@@ -75,9 +71,7 @@ export const findAccount = async (
     }
 };
 
-export const checkAccountExists = async (
-    accountId: ObjectId,
-) => {
+export const checkAccountExists = async (accountId: ObjectId) => {
     try {
         const mongoClient = await getMongoClient();
         const collection = mongoClient

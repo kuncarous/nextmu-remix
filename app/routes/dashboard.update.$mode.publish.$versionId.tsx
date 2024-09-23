@@ -3,15 +3,15 @@ import {
     ActionFunctionArgs,
     LinksFunction,
     LoaderFunctionArgs,
+    redirect,
     TypedResponse,
 } from '@remix-run/node';
 import { useFetcher, useLoaderData } from '@remix-run/react';
 import { StatusCodes } from 'http-status-codes';
-import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { serverOnly$ } from 'vite-env-only/macros';
 import { UpdateStepper, UpdateSteps } from '~/components/update-stepper';
-import { UpdateServices, getUpdateService } from '~/consts/update';
+import { getUpdateService, UpdateServices } from '~/consts/update';
 import {
     getAccessToken,
     getPublicUserInfoFromSession,
@@ -27,7 +27,7 @@ import { parseGrpcErrorIntoJsonResponse } from '~/utils/grpc.server';
 import mantineTiptapStyles from '@mantine/tiptap/styles.css?url';
 import { ClientOnly } from 'remix-utils/client-only';
 
-import { ObjectId } from 'mongodb';
+import { ObjectId } from 'bson';
 import { RequiredNonNullable } from '~/utils/types';
 
 const requiredRole = serverOnly$('update:edit');
@@ -147,23 +147,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
         return parseGrpcErrorIntoJsonResponse(error);
     }
 
-    return {};
+    return redirect('/dashboard/update/list');
 }
 
 function ClientOnlyPage() {
     const { t } = useTranslation();
     const { version } = useLoaderData<LoaderType>();
     const fetcher = useFetcher<typeof action>();
-
-    const onSubmit = useCallback(() => {
-        fetcher.submit(
-            {},
-            {
-                encType: 'application/json',
-                method: 'post',
-            },
-        );
-    }, [fetcher]);
 
     return (
         <Flex className="grow p-4" direction="column">
@@ -183,17 +173,11 @@ function ClientOnlyPage() {
                         </span>
                     </Flex>
                     <Divider className="my-2" />
-                    <Button
-                        className="self-end"
-                        type="submit"
-                        disabled={fetcher.state !== 'idle'}
-                        onClick={onSubmit}
-                    >
-                        {fetcher.state !== 'idle' && (
-                            <Loader className="mr-2" size="xs" />
-                        )}
-                        {t('dashboard.updates.publish.publish.label')}
-                    </Button>
+                    <fetcher.Form className="self-end" method="post">
+                        <Button className="self-end" type="submit">
+                            {t('dashboard.updates.publish.publish.label')}
+                        </Button>
+                    </fetcher.Form>
                 </Flex>
             </Flex>
         </Flex>

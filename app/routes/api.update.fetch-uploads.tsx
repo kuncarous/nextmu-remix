@@ -1,6 +1,6 @@
 import { LoaderFunctionArgs, json } from '@remix-run/node';
+import { ObjectId } from 'bson';
 import { StatusCodes } from 'http-status-codes';
-import { ObjectId } from 'mongodb';
 import { serverOnly$ } from 'vite-env-only/macros';
 import { z } from 'zod';
 import { ZValidUpdateServiceMode, getUpdateService } from '~/consts/update';
